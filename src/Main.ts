@@ -12,7 +12,7 @@ class Main {
 
         setInterval(() => {
             Main.updateMatchMaker()
-        }, 5000);
+        }, 1000);
     }
 
     private static updateMatchMaker(): void {
