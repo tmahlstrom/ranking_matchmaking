@@ -12,7 +12,7 @@ class Main {
 
         setInterval(() => {
             Main.updateMatchMaker()
-        }, 1000);
+        }, 10);
     }
 
     private static updateMatchMaker(): void {
@@ -20,12 +20,12 @@ class Main {
         Main.CreateRandomTestTickets(Util.getRandomArbitrary(1, 3));
     }
 
-    private static CreateRandomTestTickets(count: number): void { //the username of the test ticket indicates their elo as well as the realms they are search 
+    private static CreateRandomTestTickets(count: number): void { //username indicates elo and realm search
         for (let i = 0; i < count; i++) {
 
             let newTicket = new GameSearchTicket();
 
-            let elo = Util.getRandomArbitrary(600, 2400)
+            let elo = Util.getRandomArbitrary(1000, 2400)
             newTicket.elo = elo;
             newTicket.realmSearch = 0;
 
@@ -37,6 +37,9 @@ class Main {
             }
             if (Util.getRandomArbitrary(0, 2) > 0) {
                 newTicket.realmSearch |= ERealm.us;
+            }
+            if (newTicket.realmSearch == 0){//if not searching on any realms, serach on eu
+                newTicket.realmSearch |= ERealm.eu;
             }
 
             let realmIDs = "";

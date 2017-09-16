@@ -6,8 +6,6 @@ export enum ERealm {
 
 export class GameSearchTicket {
     public username: string;
-    public testtest: string; 
-
     public elo: number;
     public timeOfLastSearchRangeExpansion: number = Date.now();
     public eloSearchRange: number; //e.g., if this is 100, opponents with +/-100 elo will be accepted. this number is increased incrimentally during the search every so often.
