@@ -1,0 +1,23 @@
+{
+  "name": "matchmaking",
+  "version": "0.0.1",
+  "description": "Matchmaking-Module for the War3Unity Server",
+  "main": "Main.ts",
+  "scripts": {
+    "start": "tsc -p . && node ./dist/Main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/padjon/War3Unity-Matchmaking.git"
+  },
+  "author": "Tyler; Patrick",
+  "bugs": {
+    "url": "https://github.com/padjon/War3Unity-Matchmaking/issues"
+  },
+  "homepage": "https://github.com/padjon/War3Unity-Matchmaking#readme",
+  "dependencies": {
+    "@types/jasmine": "^2.6.0",
+    "@types/node": "^8.0.28",
+    "typescript": "^2.5.2"
+  }
+}
