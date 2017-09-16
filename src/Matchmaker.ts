@@ -117,8 +117,9 @@ class MatchMaker extends EventEmitter {
 
 
     private considerIncreasingSearchRangeOfRemainingTickets(): void {
+        
         for (let ticket of this.searchTickets) {
-            var secondsSinceLastSearchExpansion = Date.now() - ticket.timeOfLastSearchRangeExpansion;
+            var secondsSinceLastSearchExpansion = (Date.now() - ticket.timeOfLastSearchRangeExpansion) / 1000;
             if (ticket.eloSearchRange < this.maxSearchRange && secondsSinceLastSearchExpansion > this.secondsUntilSearchExpansion) {
                 ticket.eloSearchRange += this.sizeOfEachSearchExpansion;
             }
