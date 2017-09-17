@@ -1,5 +1,5 @@
 import { matchMaker } from './Matchmaker';
-import { GameSearchTicket, ERealm } from './GameSearchTicket';
+import { GameSearchTicket, ERealm, EGameType } from './GameSearchTicket';
 import { Util } from './Util';
 
 class Main {
@@ -27,8 +27,20 @@ class Main {
 
             let elo = Util.getRandomArbitrary(1000, 2400)
             newTicket.elo = elo;
-            newTicket.realmSearch = 0;
 
+            newTicket.gameType = 0; 
+            if (Util.getRandomArbitrary(0, 3) > 1) {
+                newTicket.gameType |= EGameType.solo;
+            } else if (Util.getRandomArbitrary(0, 3) > 1) {
+                newTicket.gameType |= EGameType.twoRT;
+            } else if (Util.getRandomArbitrary(0, 3) > 1) {
+                newTicket.gameType |= EGameType.twoAT;
+            } else {
+                newTicket.gameType |= EGameType.fourRT;
+            }
+
+
+            newTicket.realmSearch = 0;
             if (Util.getRandomArbitrary(0, 2) > 0) {
                 newTicket.realmSearch |= ERealm.asia;
             }
@@ -41,17 +53,17 @@ class Main {
             if (newTicket.realmSearch == 0){//if not searching on any realms, serach on eu
                 newTicket.realmSearch |= ERealm.eu;
             }
-
             let realmIDs = "";
-
             realmIDs += (newTicket.realmSearch & ERealm.asia) ? 'a' : 'x';
             realmIDs += (newTicket.realmSearch & ERealm.eu) ? 'e' : 'x';
             realmIDs += (newTicket.realmSearch & ERealm.us) ? 'u' : 'x';
 
-            newTicket.username = "testUser" + elo + realmIDs;//the username
+
+            newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the username
 
             matchMaker.beginSoloGameSearch(newTicket);
         }
     }
+
 }
 export const main:Main = new Main();

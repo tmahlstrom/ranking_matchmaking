@@ -63,14 +63,23 @@ class MatchMaker extends EventEmitter {
             ticket.possibleOpponents = new Array();
             for (let otherTicket of this.searchTickets) {
                 if (ticket != otherTicket) {
-                    if (this.ticketsAreRealmCompatible(ticket, otherTicket) && this.ticketsAreEloCompatible(ticket, otherTicket)) {
-                        ticket.possibleOpponents.push(otherTicket);
+                    if (this.ticketsAreGameTypeCompatible(ticket, otherTicket)){
+                        if (this.ticketsAreRealmCompatible(ticket, otherTicket) && this.ticketsAreEloCompatible(ticket, otherTicket)) {
+                            ticket.possibleOpponents.push(otherTicket);
+                        }
                     }
                 }
             }
         }
     }
 
+
+    private ticketsAreGameTypeCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket){
+        if (ticket1.gameType == ticket2.gameType){
+            return true;
+        }
+        return false;
+    }
 
     private ticketsAreRealmCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket): boolean {
         return (ticket1.realmSearch & ticket2.realmSearch) > 0;
