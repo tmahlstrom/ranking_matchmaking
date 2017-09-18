@@ -14,7 +14,8 @@ export enum EGameType {
 export class GameSearchTicket {
     public username: string;
     public elo: number;
-    public gameType: number;            
+    public gameType: number;    
+    public partner: GameSearchTicket;         
 
     public timeOfBeginSearch: number = Date.now();
     public timeOfLastSearchRangeExpansion: number = Date.now();
@@ -25,4 +26,5 @@ export class GameSearchTicket {
     public realmSearch: number 
 
     public hasBeenMatched: boolean;
+    public hadToWaitTime: number; 
 }

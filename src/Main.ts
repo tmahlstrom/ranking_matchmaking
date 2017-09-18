@@ -1,4 +1,5 @@
 import { matchMaker } from './Matchmaker';
+import { matchMakerAnalyzer } from './MatchmakerAnalyzer';
 import { GameSearchTicket, ERealm, EGameType } from './GameSearchTicket';
 import { Util } from './Util';
 
@@ -6,18 +7,34 @@ class Main {
     constructor() {
         console.log("\nPress ctrl + c to exit the application...\n")
         
-        matchMaker.on("matched", (ticket1: GameSearchTicket, ticket2: GameSearchTicket)=> {
+        matchMaker.on("soloMatchMade", (ticket1: GameSearchTicket, ticket2: GameSearchTicket)=> {
             console.log(ticket1.username + " has been matched with " + ticket2.username);
+        })
+        matchMaker.on("twosMatchMade", (twosTickets: GameSearchTicket[])=> {
+            console.log(twosTickets[0].username + " has been teamed with " + twosTickets[1].username + " against " + twosTickets[2].username + " and " + twosTickets[3].username + " in a twos match");
+        })
+
+        matchMaker.on("foursMatchMade", (foursTickets: GameSearchTicket[])=> {
+            console.log(foursTickets[0].username + " has been teamed with " + foursTickets[1].username + ", " + foursTickets[2].username + ", and " + foursTickets[3].username + " in a fours match against " + foursTickets[4].username + ", " + foursTickets[5].username + ", " + foursTickets[6].username + ", " + foursTickets[7].username);
         })
 
         setInterval(() => {
             Main.updateMatchMaker()
-        }, 10);
+        }, 1000);
+
+        setInterval(() => {
+            Main.analyzeProcessedTickets()
+        }, 5000);
     }
 
     private static updateMatchMaker(): void {
         matchMaker.processSearchTickets();
         Main.CreateRandomTestTickets(Util.getRandomArbitrary(1, 3));
+    }
+
+    private static analyzeProcessedTickets(): void {
+        var processedTickets = matchMaker.handOverProcessedTickets();
+        matchMakerAnalyzer.analyzeProcessedTickets(processedTickets);
     }
 
     private static CreateRandomTestTickets(count: number): void { //username indicates elo and realm search
@@ -61,7 +78,7 @@ class Main {
 
             newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the username
 
-            matchMaker.beginSoloGameSearch(newTicket);
+            matchMaker.beginGameSearch(newTicket);
         }
     }
 

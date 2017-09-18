@@ -6,6 +6,8 @@ class MatchMaker extends EventEmitter {
     private searchTickets: Array<GameSearchTicket> = new Array<GameSearchTicket>();
     private ticketsToAdd: Array<GameSearchTicket> = new Array<GameSearchTicket>();
     private ticketsToRemove: Array<GameSearchTicket> = new Array<GameSearchTicket>();
+    private processedTickets: Array<GameSearchTicket> = new Array<GameSearchTicket>();
+    
 
     /// <summary>
     /// these varaibles can be tweaked to make finding games easier when there is low traffic. 
@@ -13,16 +15,16 @@ class MatchMaker extends EventEmitter {
     /// 1. reduce secondsUntilSearchExpansion; right now, the max search range is achieved after 200 seconds
     /// 2. increase the maxSearchRange. 400 elo is already a pretty big skill difference, but espeically at the very top level we might have to increase this to find games.
     /// </summary>
-    public startingEloSearchRange = 50;
-    public secondsUntilSearchExpansion = 10;
+    public startingEloSearchRange = 200;
+    public secondsUntilSearchExpansion = 3;
     public sizeOfEachSearchExpansion = 20;
-    public maxSearchRange = 400;
+    public maxSearchRange = 600;
 
     //3 key public functions: add ticket to search, remove ticket from search, and process the tickets
-    public beginSoloGameSearch(ticket: GameSearchTicket): void {//new tickets are first added to a temp list, so that they can be added to the real list at a convenient time (safter in case we use coroutines or something at some point)
+    public beginGameSearch(ticket: GameSearchTicket): void {//new tickets are first added to a temp list, so that they can be added to the real list at a convenient time (safter in case we use coroutines or something at some point)
         ticket.eloSearchRange = this.startingEloSearchRange;
         this.ticketsToAdd.push(ticket);
-        console.log("added " + ticket.username);
+        console.log("    added " + ticket.username);
 
     }
 
@@ -36,11 +38,16 @@ class MatchMaker extends EventEmitter {
         this.removeCanceledTickets();
         this.addNewTickets();
         console.log(this.searchTickets.length + " tickets being considered");
-        console.log("calculating possible opponents based on elo and realm");
         this.determinePossibleOpponents();
         this.considerMakingMatches();
-        this.removeMatchedTicketsFromList();
+        this.removeMatchedTicketsFromSearch();
         this.considerIncreasingSearchRangeOfRemainingTickets();
+    }
+
+    public handOverProcessedTickets(): Array<GameSearchTicket>{
+        var processedTicketsLedger = this.processedTickets; 
+        this.processedTickets = new Array();
+        return processedTicketsLedger; 
     }
 
 
@@ -59,6 +66,7 @@ class MatchMaker extends EventEmitter {
     }
 
     private determinePossibleOpponents(): void {
+        console.log("calculating possible opponents based on game type, elo, and realm");
         for (let ticket of this.searchTickets) {
             ticket.possibleOpponents = new Array();
             for (let otherTicket of this.searchTickets) {
@@ -73,9 +81,11 @@ class MatchMaker extends EventEmitter {
         }
     }
 
-
     private ticketsAreGameTypeCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket){
         if (ticket1.gameType == ticket2.gameType){
+            return true;
+        }
+        if ((ticket1.gameType == 2 || ticket1.gameType == 3) && (ticket2.gameType == 2 || ticket2.gameType == 3)){
             return true;
         }
         return false;
@@ -98,28 +108,109 @@ class MatchMaker extends EventEmitter {
     private considerMakingMatches(): void {
         this.searchTickets.sort((x, y) => x.possibleOpponents.length - y.possibleOpponents.length);//this orders the list based on the number of possible opponnets (low to high). in the matching, it is important to prioritize those with fewer possible opponents. 
         for (let ticket of this.searchTickets) {
-            console.log("    " + ticket.username + " has " + ticket.possibleOpponents.length + " possible opponents");
+            console.log("    " + ticket.username + "has " + ticket.possibleOpponents.length + " possible opponents");
         }
-
         for (let ticket of this.searchTickets) {
-            if (ticket.possibleOpponents.length > 0 && !ticket.hasBeenMatched) {
-                for (let i = 0; i < ticket.possibleOpponents.length; i++) {
-                    if (!ticket.possibleOpponents[i].hasBeenMatched) {
-                        this.makeMatch(ticket, ticket.possibleOpponents[i]);
-                        break;
-                    }
+            if (!ticket.hasBeenMatched){
+                if (ticket.gameType == 1 && ticket.possibleOpponents.length >= 1){
+                    this.considerMakingSoloMatch(ticket);
                 }
+                if (ticket.gameType == (2 || 3) && ticket.possibleOpponents.length >= 3){
+                    this.considerMakingTwosMatch(ticket);
+                }
+                if (ticket.gameType == 4){
+                    this.considerMakingFoursMatch(ticket);
+                }
+            }
+        }
+       
+    }
+
+    private considerMakingSoloMatch(ticket: GameSearchTicket){
+        for (let i = 0; i < ticket.possibleOpponents.length; i++) {
+            if (!ticket.possibleOpponents[i].hasBeenMatched) {
+                this.makeSoloMatch(ticket, ticket.possibleOpponents[i]);
+                break;
             }
         }
     }
 
-    private makeMatch(ticket1: GameSearchTicket, ticket2: GameSearchTicket): void {
+    private makeSoloMatch(ticket1: GameSearchTicket, ticket2: GameSearchTicket): void {
         ticket1.hasBeenMatched = true;
+        ticket1.hadToWaitTime = (Date.now() - ticket1.timeOfBeginSearch) / 1000;
         ticket2.hasBeenMatched = true;
-        this.emit("matched", ticket1, ticket2);
+        ticket2.hadToWaitTime = (Date.now() - ticket2.timeOfBeginSearch) / 1000;
+        this.emit("soloMatchMade", ticket1, ticket2);
     }
 
-    private removeMatchedTicketsFromList(): void {
+    private considerMakingTwosMatch(ticket: GameSearchTicket){
+        var twosGroup = new Array();
+        twosGroup.push(ticket);
+        for (let i = 0; i < ticket.possibleOpponents.length; i++) {
+            if (!ticket.possibleOpponents[i].hasBeenMatched) {
+                var groupRealmCompatible = true; 
+                for (let j = 0; j < twosGroup.length; j++) {
+                    if ((ticket.possibleOpponents[i].realmSearch & twosGroup[j].realmSearch) == 0){
+                        groupRealmCompatible = false; 
+                    }
+                }
+                if (groupRealmCompatible){
+                    twosGroup.push(ticket.possibleOpponents[i]);
+                }
+            }
+        }
+        if (twosGroup.length >= 4){
+            twosGroup.slice(0,3);
+            this.makeTwosMatch(twosGroup);
+        }
+    }
+
+    private makeTwosMatch(twosTickets: GameSearchTicket[]){
+        for (let ticket of twosTickets){
+            ticket.hasBeenMatched = true;
+            ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
+        }
+        this.emit("twosMatchMade", twosTickets);
+    }
+
+    private considerMakingFoursMatch(ticket: GameSearchTicket){
+        var foursGroup = new Array();
+        foursGroup.push(ticket);
+        for (let i = 0; i < ticket.possibleOpponents.length; i++) {
+            if (!ticket.possibleOpponents[i].hasBeenMatched) {
+                var groupRealmCompatible = true; 
+                for (let j = 0; j < foursGroup.length; j++) {
+                    if ((ticket.possibleOpponents[i].realmSearch & foursGroup[j].realmSearch) == 0){
+                        groupRealmCompatible = false; 
+                    }
+                }
+                if (groupRealmCompatible){
+                    foursGroup.push(ticket.possibleOpponents[i]);
+                }
+            }
+        }
+        if (foursGroup.length >= 8){
+            foursGroup.slice(0,7);
+            this.makeFoursMatch(foursGroup);
+        }
+    }
+
+    private makeFoursMatch(foursTickets: GameSearchTicket[]){
+        for (let ticket of foursTickets){
+            ticket.hasBeenMatched = true;
+            ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
+        }
+        this.emit("foursMatchMade", foursTickets);
+    }
+        
+
+
+    private removeMatchedTicketsFromSearch(): void {
+        for (let ticket of this.searchTickets){
+            if (ticket.hasBeenMatched){
+                this.processedTickets.push(ticket);
+            }
+        }
         this.searchTickets = this.searchTickets.filter((ticket) => !ticket.hasBeenMatched)
         console.log(this.searchTickets.length + " tickets remain unmatched\n");
     }
