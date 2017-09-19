@@ -25,7 +25,6 @@ class MatchMaker extends EventEmitter {
         ticket.eloSearchRange = this.startingEloSearchRange;
         this.ticketsToAdd.push(ticket);
         console.log("    added " + ticket.username);
-
     }
 
     public cancelSoloGameSearch(ticket: GameSearchTicket): void {//same as for adding
@@ -115,7 +114,7 @@ class MatchMaker extends EventEmitter {
                 if (ticket.gameType == 1 && ticket.possibleOpponents.length >= 1){
                     this.considerMakingSoloMatch(ticket);
                 }
-                if (ticket.gameType == (2 || 3) && ticket.possibleOpponents.length >= 3){
+                if ((ticket.gameType == 2 || ticket.gameType == 3) && ticket.possibleOpponents.length >= 3){
                     this.considerMakingTwosMatch(ticket);
                 }
                 if (ticket.gameType == 4){
@@ -146,26 +145,40 @@ class MatchMaker extends EventEmitter {
     private considerMakingTwosMatch(ticket: GameSearchTicket){
         var twosGroup = new Array();
         twosGroup.push(ticket);
-        for (let i = 0; i < ticket.possibleOpponents.length; i++) {
+        if (ticket.partner != null){
+            twosGroup.push(ticket);
+        }
+        for (let i = 0; i < ticket.possibleOpponents.length && twosGroup.length < 4; i++) {
             if (!ticket.possibleOpponents[i].hasBeenMatched) {
                 var groupRealmCompatible = true; 
+                var teamPlacementWorks = true; 
                 for (let j = 0; j < twosGroup.length; j++) {
                     if ((ticket.possibleOpponents[i].realmSearch & twosGroup[j].realmSearch) == 0){
                         groupRealmCompatible = false; 
                     }
+                    if (ticket.possibleOpponents[i].partner != null && twosGroup.length != 2){
+                        teamPlacementWorks = false;
+                    }
                 }
-                if (groupRealmCompatible){
+                if (groupRealmCompatible && teamPlacementWorks){
                     twosGroup.push(ticket.possibleOpponents[i]);
+                    if (ticket.possibleOpponents[i].partner != null){
+                        twosGroup.push(ticket.possibleOpponents[i]);
+                    }
                 }
             }
         }
-        if (twosGroup.length >= 4){
-            twosGroup.slice(0,3);
+        if (twosGroup.length === 4){
             this.makeTwosMatch(twosGroup);
         }
     }
 
     private makeTwosMatch(twosTickets: GameSearchTicket[]){
+        // if (ticket.partner != null){
+        //     var partner1 = new GameSearchTicket;
+        //     partner1.username = ticket.partner; 
+        //     twosGroup.push(partner1);
+        // }
         for (let ticket of twosTickets){
             ticket.hasBeenMatched = true;
             ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
@@ -179,7 +192,7 @@ class MatchMaker extends EventEmitter {
         for (let i = 0; i < ticket.possibleOpponents.length; i++) {
             if (!ticket.possibleOpponents[i].hasBeenMatched) {
                 var groupRealmCompatible = true; 
-                for (let j = 0; j < foursGroup.length; j++) {
+                for (let j = 0; j < foursGroup.length && foursGroup.length < 8; j++) {
                     if ((ticket.possibleOpponents[i].realmSearch & foursGroup[j].realmSearch) == 0){
                         groupRealmCompatible = false; 
                     }
@@ -189,8 +202,7 @@ class MatchMaker extends EventEmitter {
                 }
             }
         }
-        if (foursGroup.length >= 8){
-            foursGroup.slice(0,7);
+        if (foursGroup.length === 8){
             this.makeFoursMatch(foursGroup);
         }
     }

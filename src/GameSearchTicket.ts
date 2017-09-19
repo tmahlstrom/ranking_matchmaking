@@ -15,7 +15,9 @@ export class GameSearchTicket {
     public username: string;
     public elo: number;
     public gameType: number;    
-    public partner: GameSearchTicket;         
+
+    public partner: string;  
+    public partnerElo: number;       
 
     public timeOfBeginSearch: number = Date.now();
     public timeOfLastSearchRangeExpansion: number = Date.now();

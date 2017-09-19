@@ -11,7 +11,19 @@ class Main {
             console.log(ticket1.username + " has been matched with " + ticket2.username);
         })
         matchMaker.on("twosMatchMade", (twosTickets: GameSearchTicket[])=> {
-            console.log(twosTickets[0].username + " has been teamed with " + twosTickets[1].username + " against " + twosTickets[2].username + " and " + twosTickets[3].username + " in a twos match");
+            var ally1; 
+            if (twosTickets[0] === twosTickets[1]){
+                ally1 = twosTickets[0].partner;
+            } else {
+                ally1 = twosTickets[1].username;
+            }
+            var ally2; 
+            if (twosTickets[2] === twosTickets[3]){
+                ally2 = twosTickets[2].partner;
+            } else {
+                ally2 = twosTickets[3].username;
+            }
+            console.log(twosTickets[0].username + " has been teamed with " + ally1 + " against " + twosTickets[2].username + " and " + ally2 + " in a twos match");
         })
 
         matchMaker.on("foursMatchMade", (foursTickets: GameSearchTicket[])=> {
@@ -20,11 +32,11 @@ class Main {
 
         setInterval(() => {
             Main.updateMatchMaker()
-        }, 1000);
+        }, 100);
 
         setInterval(() => {
             Main.analyzeProcessedTickets()
-        }, 5000);
+        }, 500);
     }
 
     private static updateMatchMaker(): void {
@@ -34,10 +46,11 @@ class Main {
 
     private static analyzeProcessedTickets(): void {
         var processedTickets = matchMaker.handOverProcessedTickets();
-        matchMakerAnalyzer.analyzeProcessedTickets(processedTickets);
+        matchMakerAnalyzer.addProcessTickets(processedTickets);
+        matchMakerAnalyzer.analyzeProcessedTickets();
     }
 
-    private static CreateRandomTestTickets(count: number): void { //username indicates elo and realm search
+    private static CreateRandomTestTickets(count: number): void { // fake username indicates elo and realm search and gametype
         for (let i = 0; i < count; i++) {
 
             let newTicket = new GameSearchTicket();
@@ -46,16 +59,23 @@ class Main {
             newTicket.elo = elo;
 
             newTicket.gameType = 0; 
-            if (Util.getRandomArbitrary(0, 3) > 1) {
+            var randomInt = Util.getRandomArbitrary(0, 4);
+            if (randomInt === 0) {
                 newTicket.gameType |= EGameType.solo;
-            } else if (Util.getRandomArbitrary(0, 3) > 1) {
+            }
+            else if (randomInt === 1) {
                 newTicket.gameType |= EGameType.twoRT;
-            } else if (Util.getRandomArbitrary(0, 3) > 1) {
+            }
+            else if (randomInt === 2) {
+                var cutInHalf = Util.getRandomArbitrary(0, 2);//added to check numbers. since these tickets count for two people, i want half as many of them.
+                if (cutInHalf === 1){
+                    return;
+                }
                 newTicket.gameType |= EGameType.twoAT;
-            } else {
+            }
+            else if (randomInt === 3) {
                 newTicket.gameType |= EGameType.fourRT;
             }
-
 
             newTicket.realmSearch = 0;
             if (Util.getRandomArbitrary(0, 2) > 0) {
@@ -76,7 +96,10 @@ class Main {
             realmIDs += (newTicket.realmSearch & ERealm.us) ? 'u' : 'x';
 
 
-            newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the username
+            newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the fake (info rich) username
+            if (newTicket.gameType === EGameType.twoAT){
+                newTicket.partner = "PARTNERof" + newTicket.username;// + Util.getRandomArbitrary(0, 99).toString;
+            }
 
             matchMaker.beginGameSearch(newTicket);
         }
