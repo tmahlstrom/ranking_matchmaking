@@ -1,4 +1,4 @@
-import { GameSearchTicket } from './GameSearchTicket';
+import { GameSearchTicket, ERealm, EGameType } from './GameSearchTicket';
 import { EventEmitter } from 'events';
 
 class MatchMaker extends EventEmitter {
@@ -16,6 +16,7 @@ class MatchMaker extends EventEmitter {
     /// 2. increase the maxSearchRange. 400 elo is already a pretty big skill difference, but espeically at the very top level we might have to increase this to find games.
     /// </summary>
     public startingEloSearchRange = 200;
+    public eloBumpForATSearch = 150; 
     public secondsUntilSearchExpansion = 3;
     public sizeOfEachSearchExpansion = 20;
     public maxSearchRange = 600;
@@ -96,8 +97,16 @@ class MatchMaker extends EventEmitter {
 
 
     private ticketsAreEloCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket): boolean { //each ticket has to be within the elo search range as the other ticket for them to be compatible
-        if (ticket1.elo + ticket1.eloSearchRange > ticket2.elo && ticket1.elo - ticket1.eloSearchRange < ticket2.elo) {
-            if (ticket2.elo + ticket2.eloSearchRange > ticket1.elo && ticket2.elo - ticket2.eloSearchRange < ticket1.elo) {
+        var eloSearchBump1 = 0; 
+        var eloSearchBump2 = 0; 
+        if (ticket1.gameType === EGameType.twoAT){
+            eloSearchBump1 = this.eloBumpForATSearch; 
+        }
+        if (ticket2.gameType === EGameType.twoAT){
+            eloSearchBump2 = this.eloBumpForATSearch; 
+        }
+        if ((ticket1.elo + eloSearchBump1 + ticket1.eloSearchRange > ticket2.elo + eloSearchBump2) && (ticket1.elo + eloSearchBump1 - ticket1.eloSearchRange < ticket2.elo + eloSearchBump2)) {
+            if ((ticket2.elo + eloSearchBump2 + ticket2.eloSearchRange > ticket1.elo + eloSearchBump1) && (ticket2.elo + eloSearchBump2 - ticket2.eloSearchRange < ticket1.elo + eloSearchBump1)) {
                 return true;
             }
         }
@@ -174,11 +183,6 @@ class MatchMaker extends EventEmitter {
     }
 
     private makeTwosMatch(twosTickets: GameSearchTicket[]){
-        // if (ticket.partner != null){
-        //     var partner1 = new GameSearchTicket;
-        //     partner1.username = ticket.partner; 
-        //     twosGroup.push(partner1);
-        // }
         for (let ticket of twosTickets){
             ticket.hasBeenMatched = true;
             ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
