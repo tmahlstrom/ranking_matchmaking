@@ -11,7 +11,7 @@ var settings = {
     //e.g., someone may have a 1500 rating by always beating <1500 players and losing to >1500 players. they would have low vol
     //someone else might always beat 1600 players and lose to 1400 players. they may also have a 1500 rating (even with a low rd) but a higher vol
 };
-var ranking = new glicko2.Glicko2(settings);
+var ratingSystem = new glicko2.Glicko2(settings);
 
 
 export class PlayerRatingCard{
@@ -27,7 +27,7 @@ export class RatingUpdater{
 
     public updateRating (playerRatingCards : PlayerRatingCard[], team1Won : boolean){
 
-        ranking.removePlayers();
+        ratingSystem.removePlayers();
 
         let teams = this.establishTeams(playerRatingCards);
         let teamAverageCards = this.makeTeamAverageCards(teams);
@@ -36,7 +36,7 @@ export class RatingUpdater{
         let teamAverageFakePlayers = this.makePlayers(teamAverageCards); 
 
         let matches = this.makeMatches(players, teamAverageFakePlayers, team1Won);
-        ranking.updateRatings(matches);
+        ratingSystem.updateRatings(matches);
 
         playerRatingCards = this.rewritePlayerRatingCards(playerRatingCards, players);
        
@@ -83,7 +83,7 @@ export class RatingUpdater{
     private makePlayers (cards : PlayerRatingCard[]){
         let players = new Array(cards.length);
         for (let i = 0; i < cards.length; i++) {
-            players[i] = ranking.makePlayer(cards[i].rating, cards[i].ratingUncertainty, cards[i].ratingVolatility); 
+            players[i] = ratingSystem.makePlayer(cards[i].rating, cards[i].ratingUncertainty, cards[i].ratingVolatility); 
         }
         return players; 
     }
