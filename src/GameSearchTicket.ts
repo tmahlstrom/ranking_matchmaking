@@ -12,21 +12,22 @@ export enum EGameType {
 }
 
 export class GameSearchTicket {
-    public username: string;
-    public elo: number;
-    public gameType: number;    
+    public username: string;  //*** needs to be set prior to submission
+    public elo: number;  //*** needs to be set prior to submission
+    public gameType: number;  //*** needs to be set prior to submission
+    public realmSearch: number  //*** needs to be set prior to submission
 
-    public partner: string;  
-    public partnerElo: number;       
+    public partner: string;  //*** leave empty if not AT search (if it is an AT search, only one ticket is is requried for the pair)
+    public partnerElo: number; //same as above
+
+    //below never needs to be touched to submit search
 
     public timeOfBeginSearch: number = Date.now();
     public timeOfLastSearchRangeExpansion: number = Date.now();
 
-    public eloSearchRange: number; //e.g., if this is 100, opponents with +/-100 elo will be accepted. this number is increased incrimentally during the search every so often.
+    public eloSearchRange: number; 
     public possibleOpponents: Array<GameSearchTicket>  = new Array<GameSearchTicket>();
 
-    public realmSearch: number 
-
     public hasBeenMatched: boolean;
-    public hadToWaitTime: number; 
+    public hadToWaitTime: number;
 }

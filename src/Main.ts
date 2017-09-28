@@ -1,65 +1,104 @@
-import { matchMaker } from './Matchmaker';
-import { matchMakerAnalyzer } from './MatchmakerAnalyzer';
+import { matchmaker } from './Matchmaker';
+import { matchmakerAnalyzer } from './MatchmakerAnalyzer';
 import { GameSearchTicket, ERealm, EGameType } from './GameSearchTicket';
+import { ratingUpdater, PlayerRatingCard } from './RatingUpdater';
 import { Util } from './Util';
 
 class Main {
     constructor() {
         console.log("\nPress ctrl + c to exit the application...\n")
         
-        matchMaker.on("soloMatchMade", (ticket1: GameSearchTicket, ticket2: GameSearchTicket)=> {
-            console.log(ticket1.username + " has been matched with " + ticket2.username);
-        })
-        matchMaker.on("twosMatchMade", (twosTickets: GameSearchTicket[])=> {
-            var ally1; 
-            if (twosTickets[0] === twosTickets[1]){
-                ally1 = twosTickets[0].partner;
-            } else {
-                ally1 = twosTickets[1].username;
-            }
-            var ally2; 
-            if (twosTickets[2] === twosTickets[3]){
-                ally2 = twosTickets[2].partner;
-            } else {
-                ally2 = twosTickets[3].username;
-            }
-            console.log(twosTickets[0].username + " has been teamed with " + ally1 + " against " + twosTickets[2].username + " and " + ally2 + " in a twos match");
-        })
+        Main.example1v1RatingsUpdateSubmission();
+        Main.example2v2RatingsUpdateSubmission();
+        Main.example4v4RatingsUpdateSubmission();
 
-        matchMaker.on("foursMatchMade", (foursTickets: GameSearchTicket[])=> {
-            console.log(foursTickets[0].username + " has been teamed with " + foursTickets[1].username + ", " + foursTickets[2].username + ", and " + foursTickets[3].username + " in a fours match against " + foursTickets[4].username + ", " + foursTickets[5].username + ", " + foursTickets[6].username + ", " + foursTickets[7].username);
+        Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
+        
+
+        matchmaker.on("soloMatchMade", (usernames: string[])=> {
+            console.log(usernames[0] + " has been matched with " + usernames[1]);
+        })
+        matchmaker.on("twosMatchMade", (usernames: string[])=> {
+            console.log(usernames[0] + " has been teamed with " + usernames[1] + " against " + usernames[2] + " and " + usernames[3] + " in a twos match");
+        })
+        matchmaker.on("foursMatchMade", (usernames: string[])=> {
+            console.log(usernames[0] + " has been teamed with " + usernames[1] + ", " + usernames[2] + ", and " + usernames[3] + " in a fours match against " + usernames[4] + ", " + usernames[5] + ", " + usernames[6] + ", " + usernames[7]);
         })
 
         setInterval(() => {
-            Main.updateMatchMaker()
-        }, 100);
+            Main.updateMatchmaker()
+        }, 1000); //when the console is not being used to example the workings of this module, this number should be smaller, maybe 100-200, primarily so that search cancels are processed quickly (and people are not matched for games nearly a second after they 'cancel' their search)
 
         setInterval(() => {
             Main.analyzeProcessedTickets()
-        }, 500);
+        }, 5000); //when the console is not being used to example the workings of this module, this number can be called less often
     }
 
-    private static updateMatchMaker(): void {
-        matchMaker.processSearchTickets();
-        Main.CreateRandomTestTickets(Util.getRandomArbitrary(1, 3));
+    private static updateMatchmaker(): void {
+        Main.submitRandomGameSearchTickets(Util.getRandomInteger(1, 10));
+        matchmaker.processSearchTickets();
     }
 
     private static analyzeProcessedTickets(): void {
-        var processedTickets = matchMaker.handOverProcessedTickets();
-        matchMakerAnalyzer.addProcessTickets(processedTickets);
-        matchMakerAnalyzer.analyzeProcessedTickets();
+        var processedTickets = matchmaker.handOverProcessedTickets();
+        matchmakerAnalyzer.addProcessTickets(processedTickets);
+        matchmakerAnalyzer.analyzeProcessedTickets();
     }
 
-    private static CreateRandomTestTickets(count: number): void { // fake username indicates elo and realm search and gametype
+
+    /*
+    For the rating update submission, the bool indicates whether or not team 1 won.
+    The order of the player rating cards indicates the teams:
+    Solo: [team1, team2]
+    Twos: [team1, team1, team2, team2]
+    and so with 4s.
+    See the PlayerRatingCard class in the Matchmaker script for details on that, but in short, it has a username and 3 rating parameters
+    */
+    private static example1v1RatingsUpdateSubmission(){
+        let playerRatingCards = Main.createRandomPlayerRatingCards(2); 
+        var soloExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, true);
+        console.log("UPDATED RATINGS FOR 1V1 (see username for original rating):");
+        console.log(soloExampleUpdateSubmission);
+    }
+
+    private static example2v2RatingsUpdateSubmission(){
+        let playerRatingCards = Main.createRandomPlayerRatingCards(4); 
+        var twosExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, false);
+        console.log("UPDATED RATINGS FOR 2V2 (see username for original rating):");
+        console.log(twosExampleUpdateSubmission);
+    }
+
+    private static example4v4RatingsUpdateSubmission(){
+        let playerRatingCards = Main.createRandomPlayerRatingCards(8); 
+        var foursExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, true);
+        console.log("UPDATED RATINGS FOR 4V4 (see username for original rating):");
+        console.log(foursExampleUpdateSubmission);
+        console.log(" ");
+    }
+
+    private static createRandomPlayerRatingCards(count: number){
+        let cards = []; 
+        for (let i = 0; i < count; i++){
+            let newCard = new PlayerRatingCard();
+            newCard.rating = Util.getRandomInteger(1000, 2400); 
+            newCard.ratingUncertainty = Util.getRandomArbitrary(25, 250);
+            newCard.ratingVolatility = Util.getRandomArbitrary(.04, .06);
+            newCard.username = "testcard" + newCard.rating;
+            cards.push(newCard); 
+        }
+        return cards; 
+    }
+
+    private static submitRandomGameSearchTickets(count: number): void { // fake username indicates elo and realm search and gametype
         for (let i = 0; i < count; i++) {
 
             let newTicket = new GameSearchTicket();
 
-            let elo = Util.getRandomArbitrary(1000, 2400)
+            let elo = Util.getRandomInteger(1000, 2400)
             newTicket.elo = elo;
 
             newTicket.gameType = 0; 
-            var randomInt = Util.getRandomArbitrary(0, 4);
+            var randomInt = Util.getRandomInteger(0, 4);
             if (randomInt === 0) {
                 newTicket.gameType |= EGameType.solo;
             }
@@ -67,7 +106,7 @@ class Main {
                 newTicket.gameType |= EGameType.twoRT;
             }
             else if (randomInt === 2) {
-                var cutInHalf = Util.getRandomArbitrary(0, 2);//added to check numbers. since these tickets count for two people, i want half as many of them.
+                var cutInHalf = Util.getRandomInteger(0, 2);//added to check numbers. since these tickets count for two people, i want half as many of them.
                 if (cutInHalf === 1){
                     return;
                 }
@@ -78,13 +117,13 @@ class Main {
             }
 
             newTicket.realmSearch = 0;
-            if (Util.getRandomArbitrary(0, 2) > 0) {
+            if (Util.getRandomInteger(0, 2) > 0) {
                 newTicket.realmSearch |= ERealm.asia;
             }
-            if (Util.getRandomArbitrary(0, 2) > 0) {
+            if (Util.getRandomInteger(0, 2) > 0) {
                 newTicket.realmSearch |= ERealm.eu;
             }
-            if (Util.getRandomArbitrary(0, 2) > 0) {
+            if (Util.getRandomInteger(0, 2) > 0) {
                 newTicket.realmSearch |= ERealm.us;
             }
             if (newTicket.realmSearch == 0){//if not searching on any realms, serach on eu
@@ -101,7 +140,7 @@ class Main {
                 newTicket.partner = "PARTNERof" + newTicket.username;// + Util.getRandomArbitrary(0, 99).toString;
             }
 
-            matchMaker.beginGameSearch(newTicket);
+            matchmaker.beginGameSearch(newTicket);
         }
     }
 

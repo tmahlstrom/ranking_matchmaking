@@ -1,8 +1,8 @@
 import { GameSearchTicket } from './GameSearchTicket';
-import { matchMaker } from './Matchmaker';
+import { matchmaker } from './Matchmaker';
 
 
-class MatchMakerAnalyzer{
+class MatchmakerAnalyzer{
 
     private allProcessedTickets: Array<GameSearchTicket> = new Array<GameSearchTicket>();
     
@@ -50,4 +50,4 @@ class MatchMakerAnalyzer{
         }
     }
 }
-export var matchMakerAnalyzer: MatchMakerAnalyzer = new MatchMakerAnalyzer();
+export var matchmakerAnalyzer: MatchmakerAnalyzer = new MatchmakerAnalyzer();

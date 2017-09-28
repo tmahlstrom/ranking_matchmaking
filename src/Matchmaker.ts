@@ -15,20 +15,19 @@ class MatchMaker extends EventEmitter {
     /// 1. reduce secondsUntilSearchExpansion; right now, the max search range is achieved after 200 seconds
     /// 2. increase the maxSearchRange. 400 elo is already a pretty big skill difference, but espeically at the very top level we might have to increase this to find games.
     /// </summary>
-    public startingEloSearchRange = 200;
+    public startingEloSearchRange = 250;
     public eloBumpForATSearch = 150; 
     public secondsUntilSearchExpansion = 3;
-    public sizeOfEachSearchExpansion = 20;
-    public maxSearchRange = 600;
+    public sizeOfEachSearchExpansion = 50;
+    public maxSearchRange = 700;
 
-    //3 key public functions: add ticket to search, remove ticket from search, and process the tickets
-    public beginGameSearch(ticket: GameSearchTicket): void {//new tickets are first added to a temp list, so that they can be added to the real list at a convenient time (safter in case we use coroutines or something at some point)
+    public beginGameSearch(ticket: GameSearchTicket): void {
         ticket.eloSearchRange = this.startingEloSearchRange;
         this.ticketsToAdd.push(ticket);
         console.log("    added " + ticket.username);
     }
 
-    public cancelSoloGameSearch(ticket: GameSearchTicket): void {//same as for adding
+    public cancelSoloGameSearch(ticket: GameSearchTicket): void {
         if (this.searchTickets.indexOf(ticket) >= 0) {
             this.ticketsToRemove.push(ticket);
         }
@@ -116,9 +115,6 @@ class MatchMaker extends EventEmitter {
     private considerMakingMatches(): void {
         this.searchTickets.sort((x, y) => x.possibleOpponents.length - y.possibleOpponents.length);//this orders the list based on the number of possible opponnets (low to high). in the matching, it is important to prioritize those with fewer possible opponents. 
         for (let ticket of this.searchTickets) {
-            console.log("    " + ticket.username + "has " + ticket.possibleOpponents.length + " possible opponents");
-        }
-        for (let ticket of this.searchTickets) {
             if (!ticket.hasBeenMatched){
                 if (ticket.gameType == 1 && ticket.possibleOpponents.length >= 1){
                     this.considerMakingSoloMatch(ticket);
@@ -137,18 +133,18 @@ class MatchMaker extends EventEmitter {
     private considerMakingSoloMatch(ticket: GameSearchTicket){
         for (let i = 0; i < ticket.possibleOpponents.length; i++) {
             if (!ticket.possibleOpponents[i].hasBeenMatched) {
-                this.makeSoloMatch(ticket, ticket.possibleOpponents[i]);
+                this.makeSoloMatch([ticket, ticket.possibleOpponents[i]]);
                 break;
             }
         }
     }
 
-    private makeSoloMatch(ticket1: GameSearchTicket, ticket2: GameSearchTicket): void {
-        ticket1.hasBeenMatched = true;
-        ticket1.hadToWaitTime = (Date.now() - ticket1.timeOfBeginSearch) / 1000;
-        ticket2.hasBeenMatched = true;
-        ticket2.hadToWaitTime = (Date.now() - ticket2.timeOfBeginSearch) / 1000;
-        this.emit("soloMatchMade", ticket1, ticket2);
+    private makeSoloMatch(soloTickets: GameSearchTicket[]): void {
+        for (let ticket of soloTickets){
+            ticket.hasBeenMatched = true;
+            ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
+        }
+        this.announceMatch(soloTickets);
     }
 
     private considerMakingTwosMatch(ticket: GameSearchTicket){
@@ -187,7 +183,7 @@ class MatchMaker extends EventEmitter {
             ticket.hasBeenMatched = true;
             ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
         }
-        this.emit("twosMatchMade", twosTickets);
+        this.announceMatch(twosTickets);
     }
 
     private considerMakingFoursMatch(ticket: GameSearchTicket){
@@ -216,7 +212,7 @@ class MatchMaker extends EventEmitter {
             ticket.hasBeenMatched = true;
             ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
         }
-        this.emit("foursMatchMade", foursTickets);
+        this.announceMatch(foursTickets);
     }
         
 
@@ -241,5 +237,28 @@ class MatchMaker extends EventEmitter {
             }
         }
     }
+
+    private announceMatch (gameSearchTickets : GameSearchTicket[]){
+        let usernames = new Array(gameSearchTickets.length);
+        for (let i = 0; i < usernames.length; i++){
+            usernames[i] = gameSearchTickets[i].username; 
+        }
+        if (usernames.length === 2){
+            this.emit("soloMatchMade", usernames);
+        }
+        if (usernames.length === 4){
+            if (usernames[0] === usernames[1]){
+                usernames[1] = gameSearchTickets[1].partner;
+            } 
+            if (usernames[2] === usernames[3]){
+                usernames[3] = gameSearchTickets[3].partner;  
+            }
+            this.emit("twosMatchMade", usernames);
+        }
+        if (usernames.length === 8){
+            this.emit("foursMatchMade", usernames);
+        }
+    }
+
 }
-export var matchMaker: MatchMaker = new MatchMaker();
+export var matchmaker: MatchMaker = new MatchMaker();
