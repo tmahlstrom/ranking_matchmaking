@@ -16,9 +16,9 @@ var ratingSystem = new glicko2.Glicko2(settings);
 
 export class PlayerRatingCard{
     username : string; 
-    rating : number = 0;
-    ratingUncertainty : number = 0; 
-    ratingVolatility : number = 0; 
+    rating : number = 1500;
+    ratingUncertainty : number = 250; 
+    ratingVolatility : number = 0.06; 
 
     dateSinceLastGame : Date; //I haven't worked this in yet, but this will be to update the rd in the calculation
 }
