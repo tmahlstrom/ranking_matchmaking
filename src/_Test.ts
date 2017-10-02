@@ -1,27 +1,32 @@
 import { matchmaker } from './Matchmaker';
 import { matchmakerAnalyzer } from './MatchmakerAnalyzer';
-import { GameSearchTicket, ERealm, EGameType } from './GameSearchTicket';
-import { ratingUpdater, PlayerRatingCard } from './RatingUpdater';
+import { GameSearchTicket, ERealm, EGameType } from './models/GameSearchTicket';
+import { ratingUpdater } from './RatingUpdater';
 import { Util } from './Util';
+
+import { matchmakingModule } from './_MatchmakingModule';
+import { AccountMatchmaking } from './models/persistent/AccountMatchmaking';
+import { PlayerRatingCard } from './models/PlayerRatingCard';
 
 class Main {
     constructor() {
         console.log("\nPress ctrl + c to exit the application...\n")
-        
+
+        matchmakingModule.integrationTest(new AccountMatchmaking());
         Main.example1v1RatingsUpdateSubmission();
         Main.example2v2RatingsUpdateSubmission();
         Main.example4v4RatingsUpdateSubmission();
 
         Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
-        
 
-        matchmaker.on("soloMatchMade", (usernames: string[])=> {
+
+        matchmaker.on("soloMatchMade", (usernames: string[]) => {
             console.log(usernames[0] + " has been matched with " + usernames[1]);
         })
-        matchmaker.on("twosMatchMade", (usernames: string[])=> {
+        matchmaker.on("twosMatchMade", (usernames: string[]) => {
             console.log(usernames[0] + " has been teamed with " + usernames[1] + " against " + usernames[2] + " and " + usernames[3] + " in a twos match");
         })
-        matchmaker.on("foursMatchMade", (usernames: string[])=> {
+        matchmaker.on("foursMatchMade", (usernames: string[]) => {
             console.log(usernames[0] + " has been teamed with " + usernames[1] + ", " + usernames[2] + ", and " + usernames[3] + " in a fours match against " + usernames[4] + ", " + usernames[5] + ", " + usernames[6] + ", " + usernames[7]);
         })
 
@@ -54,39 +59,39 @@ class Main {
     and so with 4s.
     See the PlayerRatingCard class in the Matchmaker script for details on that, but in short, it has a username and 3 rating parameters
     */
-    private static example1v1RatingsUpdateSubmission(){
-        let playerRatingCards = Main.createRandomPlayerRatingCards(2); 
+    private static example1v1RatingsUpdateSubmission() {
+        let playerRatingCards = Main.createRandomPlayerRatingCards(2);
         var soloExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, true);
         console.log("UPDATED RATINGS FOR 1V1 (see username for original rating):");
         console.log(soloExampleUpdateSubmission);
     }
 
-    private static example2v2RatingsUpdateSubmission(){
-        let playerRatingCards = Main.createRandomPlayerRatingCards(4); 
+    private static example2v2RatingsUpdateSubmission() {
+        let playerRatingCards = Main.createRandomPlayerRatingCards(4);
         var twosExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, false);
         console.log("UPDATED RATINGS FOR 2V2 (see username for original rating):");
         console.log(twosExampleUpdateSubmission);
     }
 
-    private static example4v4RatingsUpdateSubmission(){
-        let playerRatingCards = Main.createRandomPlayerRatingCards(8); 
+    private static example4v4RatingsUpdateSubmission() {
+        let playerRatingCards = Main.createRandomPlayerRatingCards(8);
         var foursExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, true);
         console.log("UPDATED RATINGS FOR 4V4 (see username for original rating):");
         console.log(foursExampleUpdateSubmission);
         console.log(" ");
     }
 
-    private static createRandomPlayerRatingCards(count: number){
-        let cards = []; 
-        for (let i = 0; i < count; i++){
+    private static createRandomPlayerRatingCards(count: number) {
+        let cards = [];
+        for (let i = 0; i < count; i++) {
             let newCard = new PlayerRatingCard();
-            newCard.rating = Util.getRandomInteger(1000, 2400); 
+            newCard.rating = Util.getRandomInteger(1000, 2400);
             newCard.ratingUncertainty = Util.getRandomArbitrary(25, 250);
             newCard.ratingVolatility = Util.getRandomArbitrary(.04, .06);
             newCard.username = "testcard" + newCard.rating;
-            cards.push(newCard); 
+            cards.push(newCard);
         }
-        return cards; 
+        return cards;
     }
 
     private static submitRandomGameSearchTickets(count: number): void { // fake username indicates elo and realm search and gametype
@@ -97,7 +102,7 @@ class Main {
             let elo = Util.getRandomInteger(1000, 2400)
             newTicket.elo = elo;
 
-            newTicket.gameType = 0; 
+            newTicket.gameType = 0;
             var randomInt = Util.getRandomInteger(0, 4);
             if (randomInt === 0) {
                 newTicket.gameType |= EGameType.solo;
@@ -107,7 +112,7 @@ class Main {
             }
             else if (randomInt === 2) {
                 var cutInHalf = Util.getRandomInteger(0, 2);//added to check numbers. since these tickets count for two people, i want half as many of them.
-                if (cutInHalf === 1){
+                if (cutInHalf === 1) {
                     return;
                 }
                 newTicket.gameType |= EGameType.twoAT;
@@ -126,7 +131,7 @@ class Main {
             if (Util.getRandomInteger(0, 2) > 0) {
                 newTicket.realmSearch |= ERealm.us;
             }
-            if (newTicket.realmSearch == 0){//if not searching on any realms, serach on eu
+            if (newTicket.realmSearch == 0) {//if not searching on any realms, serach on eu
                 newTicket.realmSearch |= ERealm.eu;
             }
             let realmIDs = "";
@@ -136,7 +141,7 @@ class Main {
 
 
             newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the fake (info rich) username
-            if (newTicket.gameType === EGameType.twoAT){
+            if (newTicket.gameType === EGameType.twoAT) {
                 newTicket.partner = "PARTNERof" + newTicket.username;// + Util.getRandomArbitrary(0, 99).toString;
             }
 
@@ -145,4 +150,4 @@ class Main {
     }
 
 }
-export const main:Main = new Main();
+export const main: Main = new Main();

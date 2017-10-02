@@ -4,7 +4,7 @@
   "description": "Matchmaking-Module for the War3Unity Server",
   "main": "Main.ts",
   "scripts": {
-    "start": "tsc -p . && node ./dist/Main.js"
+    "start": "tsc -p . && node ./dist/_Test.js module_mode"
   },
   "repository": {
     "type": "git",
