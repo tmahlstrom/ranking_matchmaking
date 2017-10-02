@@ -6,9 +6,9 @@ export enum ERealm {
 
 export enum EGameType {
     solo = 1,
-    twoRT,
-    twoAT,
-    fourRT
+    twoRT = 2,
+    twoAT = 4,
+    fourRT = 8
 }
 
 export class GameSearchTicket {

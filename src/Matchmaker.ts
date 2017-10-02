@@ -43,6 +43,15 @@ class MatchMaker extends EventEmitter {
         this.considerIncreasingSearchRangeOfRemainingTickets();
     }
 
+    public getMatchmakerStateInfo(){
+
+
+
+    }
+
+
+
+
     public handOverProcessedTickets(): Array<GameSearchTicket>{
         var processedTicketsLedger = this.processedTickets; 
         this.processedTickets = new Array();
@@ -81,10 +90,14 @@ class MatchMaker extends EventEmitter {
     }
 
     private ticketsAreGameTypeCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket){
-        if (ticket1.gameType == ticket2.gameType){
-            return true;
-        }
-        if ((ticket1.gameType == 2 || ticket1.gameType == 3) && (ticket2.gameType == 2 || ticket2.gameType == 3)){
+        if ((ticket1.gameType & ticket2.gameType) > 0){
+            return true; 
+        } 
+
+        // if (ticket1.gameType == ticket2.gameType){
+        //     return true;
+        // }
+        if ((ticket1.gameType == EGameType.twoAT || ticket1.gameType == EGameType.twoRT) && (ticket2.gameType == EGameType.twoAT || ticket2.gameType == EGameType.twoRT)){
             return true;
         }
         return false;
@@ -115,19 +128,19 @@ class MatchMaker extends EventEmitter {
     private considerMakingMatches(): void {
         this.searchTickets.sort((x, y) => x.possibleOpponents.length - y.possibleOpponents.length);//this orders the list based on the number of possible opponnets (low to high). in the matching, it is important to prioritize those with fewer possible opponents. 
         for (let ticket of this.searchTickets) {
+            console.log(ticket.username + " has " + ticket.possibleOpponents.length + " possible opponnets");            
             if (!ticket.hasBeenMatched){
-                if (ticket.gameType == 1 && ticket.possibleOpponents.length >= 1){
-                    this.considerMakingSoloMatch(ticket);
+                if (ticket.gameType == EGameType.fourRT && ticket.possibleOpponents.length >= 7){
+                    this.considerMakingFoursMatch(ticket);
                 }
-                if ((ticket.gameType == 2 || ticket.gameType == 3) && ticket.possibleOpponents.length >= 3){
+                if ((ticket.gameType == EGameType.twoAT || ticket.gameType == EGameType.twoRT) && ticket.possibleOpponents.length >= 3){
                     this.considerMakingTwosMatch(ticket);
                 }
-                if (ticket.gameType == 4){
-                    this.considerMakingFoursMatch(ticket);
+                if (ticket.gameType == EGameType.solo && ticket.possibleOpponents.length >= 1){
+                    this.considerMakingSoloMatch(ticket);
                 }
             }
         }
-       
     }
 
     private considerMakingSoloMatch(ticket: GameSearchTicket){
@@ -260,5 +273,8 @@ class MatchMaker extends EventEmitter {
         }
     }
 
+
+
 }
 export var matchmaker: MatchMaker = new MatchMaker();
+
