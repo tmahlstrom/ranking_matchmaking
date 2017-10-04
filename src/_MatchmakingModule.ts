@@ -1,57 +1,28 @@
 import { matchmaker } from "./Matchmaker";
+import { EGameType, ERealm, ERace } from "./models/Enums";
 import { EventEmitter } from "events";
-import { AccountMatchmaking } from "./models/persistent/AccountMatchmaking";
+import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models/ExternalModels";
 
-export enum ERealm {
-    asia = 1,
-    eu = 2,
-    us = 4
-}
 
-export enum EGameType {
-    solo = 1,
-    twosRT = 2,
-    twosAT = 4,
-    foursRT = 8
-}
-
-export enum ERace {
-    human = 1,
-    orc = 2,
-    elf = 4,
-    undead = 8,
-    random = 16
-}
-
-export class MatchSearchParams{
-    public realm : number = 0; 
-    public gameType : number = 0;
-    public race : number = 0;
-}
-
-export class MatchMadeParams{
-
-    public players : AccountMatchmaking[];
-    public races : number[]; 
-    public realm : number; 
-
-    public matchID : number; 
-}
 
 class MatchmakingModule extends EventEmitter {
+    
     constructor() {
         super();
         //proxy relevant events
-        matchmaker.on('something happened', (User1, User2) => {
+        matchmaker.on('matchMade', (details : MatchAssignment) => {
             //matched
-            const matchId = 1;
-            this.emit('matched', matchId, [User1, User2])
+            const matchId = 1; //Get next ID number
+            details.matchID = matchId; 
+            //add details to list of matches made 
+            console.log(details);
+            this.emit('matchMade', details)          
         })
     }
 
 
-    public beginMatchSearch(accounts: AccountMatchmaking[], searchDetails : MatchSearchParams[]) {
-        matchmaker.beginMatchSearch(accounts, searchDetails); 
+    public beginMatchSearch(searchDetails : MatchSearchTicket) {
+        matchmaker.beginMatchSearch(searchDetails); 
     }
 
     public cancelMatchSearch(accounts: AccountMatchmaking[]) {

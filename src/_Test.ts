@@ -1,12 +1,13 @@
 import { matchmaker } from './Matchmaker';
 import { matchmakerAnalyzer } from './MatchmakerAnalyzer';
-import { GameSearchTicket } from './models/GameSearchTicket';
+import { MatchProcessingTicket } from './models/MatchProcessingTicket';
 import { ratingUpdater } from './RatingUpdater';
 import { Util } from './Util';
 
-import { matchmakingModule, ERealm, EGameType, ERace } from './_MatchmakingModule';
-import { AccountMatchmaking } from './models/persistent/AccountMatchmaking';
+import { matchmakingModule } from './_MatchmakingModule';
+import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models/ExternalModels";
 import { PlayerRatingCard } from './models/PlayerRatingCard';
+import { EGameType, ERealm, ERace } from "./models/Enums";  
 
 class Main {
     constructor() {
@@ -15,8 +16,9 @@ class Main {
         matchmakingModule.integrationTest(new AccountMatchmaking());
         // Main.example1v1RatingsUpdateSubmission();
         // Main.example4v4RatingsUpdateSubmission();
-
         // Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
+
+        Main.submitRandomMatchSearchTicket(2); 
 
 
         matchmaker.on("soloMatchMade", (usernames: string[]) => {
@@ -49,6 +51,23 @@ class Main {
         matchmakerAnalyzer.analyzeProcessedTickets();
     }
 
+
+    private static submitRandomMatchSearchTicket(count : number){
+        for (let i = 0; i < count; i++) {
+            let searchTicket : MatchSearchTicket = new MatchSearchTicket; 
+            let account : AccountMatchmaking = new AccountMatchmaking;
+            searchTicket.players.push(account);
+            searchTicket.gameType = EGameType.solo; 
+            searchTicket.realm = 3; 
+            searchTicket.races.push (3);
+            if (i==0){
+                account.humRating = 1199; 
+                account.orcRating = 1200;
+                searchTicket.realm = 2; 
+            }
+            matchmaker.beginMatchSearch(searchTicket); 
+        }
+    }
 
     /*
     For the rating update submission, the bool indicates whether or not team 1 won.
@@ -96,7 +115,7 @@ class Main {
     private static submitRandomGameSearchTickets(count: number): void { // fake username indicates elo and realm search and gametype
         for (let i = 0; i < count; i++) {
 
-            let newTicket = new GameSearchTicket();
+            let newTicket = new MatchProcessingTicket();
 
             let elo = Util.getRandomInteger(1000, 2400)
             newTicket.ratings[0] = elo;
@@ -120,28 +139,28 @@ class Main {
                 newTicket.gameType |= EGameType.foursRT;
             }
 
-            newTicket.realmSearch = 0;
+            newTicket.realm = 0;
             if (Util.getRandomInteger(0, 2) > 0) {
-                newTicket.realmSearch |= ERealm.asia;
+                newTicket.realm |= ERealm.asia;
             }
             if (Util.getRandomInteger(0, 2) > 0) {
-                newTicket.realmSearch |= ERealm.eu;
+                newTicket.realm |= ERealm.eu;
             }
             if (Util.getRandomInteger(0, 2) > 0) {
-                newTicket.realmSearch |= ERealm.us;
+                newTicket.realm |= ERealm.us;
             }
-            if (newTicket.realmSearch == 0) {//if not searching on any realms, serach on eu
-                newTicket.realmSearch |= ERealm.eu;
+            if (newTicket.realm == 0) {//if not searching on any realms, serach on eu
+                newTicket.realm |= ERealm.eu;
             }
             let realmIDs = "";
-            realmIDs += (newTicket.realmSearch & ERealm.asia) ? 'a' : 'x';
-            realmIDs += (newTicket.realmSearch & ERealm.eu) ? 'e' : 'x';
-            realmIDs += (newTicket.realmSearch & ERealm.us) ? 'u' : 'x';
+            realmIDs += (newTicket.realm & ERealm.asia) ? 'a' : 'x';
+            realmIDs += (newTicket.realm & ERealm.eu) ? 'e' : 'x';
+            realmIDs += (newTicket.realm & ERealm.us) ? 'u' : 'x';
 
 
-            newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the fake (info rich) username
+            newTicket.account.username = "testUser" + elo + realmIDs + newTicket.gameType;//the fake (info rich) username
             if (newTicket.gameType === EGameType.twosAT) {
-                newTicket.partner = "PARTNERof" + newTicket.username;// + Util.getRandomArbitrary(0, 99).toString;
+                newTicket.partner = "PARTNERof" + newTicket.account.username;// + Util.getRandomArbitrary(0, 99).toString;
             }
 
             //matchmaker.beginMatchSearch(newTicket);

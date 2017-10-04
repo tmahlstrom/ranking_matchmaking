@@ -1,12 +1,12 @@
-import { GameSearchTicket } from './models/GameSearchTicket';
+import { MatchProcessingTicket } from './models/MatchProcessingTicket';
 import { matchmaker } from './Matchmaker';
 
 
 class MatchmakerAnalyzer {
 
-    private allProcessedTickets: Array<GameSearchTicket> = new Array<GameSearchTicket>();
+    private allProcessedTickets: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
 
-    public addProcessTickets(tickets: GameSearchTicket[]): void {
+    public addProcessTickets(tickets: MatchProcessingTicket[]): void {
         this.allProcessedTickets = this.allProcessedTickets.concat(tickets);
     }
 
