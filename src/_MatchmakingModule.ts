@@ -3,7 +3,7 @@ import { EGameType, ERealm, ERace } from "./models/Enums";
 import { EventEmitter } from "events";
 import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models/ExternalModels";
 
-
+export { AccountMatchmaking, MatchSearchTicket, MatchAssignment }
 
 class MatchmakingModule extends EventEmitter {
     
