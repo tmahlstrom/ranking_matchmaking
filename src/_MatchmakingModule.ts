@@ -26,7 +26,7 @@ class MatchmakingModule extends EventEmitter {
     }
 
     public cancelMatchSearch(accounts: AccountMatchmaking[]) {
-
+        matchmaker.cancelMatchSearch(accounts);
     }
 
     public updateRating(matchId: number, winners: AccountMatchmaking[]) {

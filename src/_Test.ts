@@ -66,6 +66,9 @@ class Main {
                 searchTicket.realm = 2; 
             }
             matchmaker.beginMatchSearch(searchTicket); 
+            if (i==0){
+                matchmaker.cancelMatchSearch([account]);
+            }
         }
     }
 

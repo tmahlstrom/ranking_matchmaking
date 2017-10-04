@@ -68,9 +68,14 @@ class Matchmaker extends EventEmitter {
         return processingTicket; 
     }
 
-    public cancelSoloGameSearch(ticket: MatchProcessingTicket): void {
-        if (this.searchTickets.indexOf(ticket) >= 0) {
-            this.ticketsToRemove.push(ticket);
+    public cancelMatchSearch(accounts: AccountMatchmaking[]): void {
+        for (let i = 0; i < accounts.length; i++){
+            for (let j = 0; j < this.searchTickets.length; j ++){
+                if (accounts[i] === this.searchTickets[j].account){
+                    this.ticketsToRemove.push(this.searchTickets[j]); 
+                    break;
+                }
+            }
         }
     }
 
