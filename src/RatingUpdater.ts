@@ -61,14 +61,17 @@ export class RatingUpdater {
 
     private createAverageCard(cards: PlayerRatingCard[]) {
         var averageRatingCard = new PlayerRatingCard;
+        averageRatingCard.rating = 0;
+        averageRatingCard.ratingUncertainty = 0; 
+        averageRatingCard.ratingVolatility = 0; 
         for (let card of cards) {
             averageRatingCard.rating += card.rating;
             averageRatingCard.ratingUncertainty += card.ratingUncertainty;
             averageRatingCard.ratingVolatility += card.ratingVolatility;
         }
-        averageRatingCard.rating = (averageRatingCard.rating * 100.0 / (cards.length)) / 100.0;
-        averageRatingCard.ratingUncertainty = averageRatingCard.ratingUncertainty * 100.0 / (cards.length) / 100.0;
-        averageRatingCard.ratingVolatility = averageRatingCard.ratingVolatility * 100.0 / (cards.length) / 100.0;
+        averageRatingCard.rating = averageRatingCard.rating / cards.length;
+        averageRatingCard.ratingUncertainty = averageRatingCard.ratingUncertainty / cards.length;
+        averageRatingCard.ratingVolatility = averageRatingCard.ratingVolatility / cards.length;
         return averageRatingCard;
     }
 
@@ -80,17 +83,15 @@ export class RatingUpdater {
         return players;
     }
 
-    private makeMatches(players: Object[], teamAverageFakePlayers: PlayerRatingCard[], team1Won: boolean) {
+    private makeMatches(players: any[], teamAverageFakePlayers: any[], team1Won: boolean) {
         var matches = new Array(players.length);
         for (let i = 0; i < players.length; i++) {
             if (i < (players.length / 2)) {
                 matches[i] = [players[i], teamAverageFakePlayers[1], team1Won];
             } else {
-                matches[i] = [teamAverageFakePlayers[0], players[i], team1Won];
+                matches[i] = [players[i], teamAverageFakePlayers[0], !team1Won];
             }
         }
-        // matches.push([players[0], teamAverageFakePlayers[1], team1Won]);
-        // matches.push([teamAverageFakePlayers[0], players[1], team1Won]);
         return matches;
     }
 

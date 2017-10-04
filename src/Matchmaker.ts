@@ -1,30 +1,61 @@
-import { GameSearchTicket, ERealm, EGameType } from './models/GameSearchTicket';
+import { GameSearchTicket } from './models/GameSearchTicket';
+import { EGameType, ERealm, ERace, MatchSearchParams, MatchMadeParams } from './_MatchmakingModule'; 
+import { AccountMatchmaking } from "./models/persistent/AccountMatchmaking";
 import { EventEmitter } from 'events';
 
-class MatchMaker extends EventEmitter {
+class Matchmaker extends EventEmitter {
 
     private searchTickets: Array<GameSearchTicket> = new Array<GameSearchTicket>();
     private ticketsToAdd: Array<GameSearchTicket> = new Array<GameSearchTicket>();
     private ticketsToRemove: Array<GameSearchTicket> = new Array<GameSearchTicket>();
     private processedTickets: Array<GameSearchTicket> = new Array<GameSearchTicket>();
 
-
-    /// <summary>
-    /// these varaibles can be tweaked to make finding games easier when there is low traffic. 
-    /// probably the best way to do this is to do two things: 
-    /// 1. reduce secondsUntilSearchExpansion; right now, the max search range is achieved after 200 seconds
-    /// 2. increase the maxSearchRange. 400 elo is already a pretty big skill difference, but espeically at the very top level we might have to increase this to find games.
-    /// </summary>
-    public startingEloSearchRange = 250;
-    public eloBumpForATSearch = 150;
+    public startingratingSearchRange = 250;
+    public ratingBumpForATSearch = 150;
     public secondsUntilSearchExpansion = 3;
     public sizeOfEachSearchExpansion = 50;
     public maxSearchRange = 700;
 
-    public beginGameSearch(ticket: GameSearchTicket): void {
-        ticket.eloSearchRange = this.startingEloSearchRange;
-        this.ticketsToAdd.push(ticket);
-        console.log("    added " + ticket.username);
+
+    public beginMatchSearch(accounts: AccountMatchmaking[], searchDetails : MatchSearchParams[]): void {
+        let gameSearchTicket : GameSearchTicket = this.createGameSearchTicket(accounts, searchDetails); 
+        // ticket.ratingSearchRange = this.startingratingSearchRange;
+        // this.ticketsToAdd.push(ticket);
+        // console.log("    added " + ticket.username);
+    }
+
+    private createGameSearchTicket(accounts: AccountMatchmaking[], searchDetails : MatchSearchParams[]){
+        let gameSearchTicket = new GameSearchTicket;
+        gameSearchTicket.username = accounts[0].username;
+        gameSearchTicket.gameType = searchDetails[0].gameType; 
+        if (searchDetails[0].gameType === (EGameType.solo)){
+            if ((searchDetails[0].race & ERace.human) > 0){
+                gameSearchTicket.ratings.push(accounts[0].humRating);
+            }
+            if ((searchDetails[0].race & ERace.orc) > 0){
+                gameSearchTicket.ratings.push(accounts[0].orcRating);
+            }
+            if ((searchDetails[0].race & ERace.elf) > 0){
+                gameSearchTicket.ratings.push(accounts[0].elfRating);
+            }
+            if ((searchDetails[0].race & ERace.undead) > 0){
+                gameSearchTicket.ratings.push(accounts[0].undRating);
+            }
+            if ((searchDetails[0].race & ERace.random) > 0){
+                gameSearchTicket.ratings.push(accounts[0].rndRating);
+            }
+        }
+        if (searchDetails[0].gameType === (EGameType.twosAT | EGameType.twosRT)){
+            gameSearchTicket.ratings.push(accounts[0].twosRating);
+        }
+        if (searchDetails[0].gameType === (EGameType.foursRT)){
+            gameSearchTicket.ratings.push(accounts[0].foursRating);
+        }
+        if (accounts.length === 2){
+            gameSearchTicket.partner = accounts[1].username;
+            gameSearchTicket.partnerRating = accounts[1].twosRating;
+        }
+        return gameSearchTicket; 
     }
 
     public cancelSoloGameSearch(ticket: GameSearchTicket): void {
@@ -45,12 +76,7 @@ class MatchMaker extends EventEmitter {
 
     public getMatchmakerStateInfo() {
 
-
-
     }
-
-
-
 
     public handOverProcessedTickets(): Array<GameSearchTicket> {
         var processedTicketsLedger = this.processedTickets;
@@ -74,13 +100,13 @@ class MatchMaker extends EventEmitter {
     }
 
     private determinePossibleOpponents(): void {
-        console.log("calculating possible opponents based on game type, elo, and realm");
+        console.log("calculating possible opponents based on game type, rating, and realm");
         for (let ticket of this.searchTickets) {
             ticket.possibleOpponents = new Array();
             for (let otherTicket of this.searchTickets) {
                 if (ticket != otherTicket) {
                     if (this.ticketsAreGameTypeCompatible(ticket, otherTicket)) {
-                        if (this.ticketsAreRealmCompatible(ticket, otherTicket) && this.ticketsAreEloCompatible(ticket, otherTicket)) {
+                        if (this.ticketsAreRealmCompatible(ticket, otherTicket) && this.ticketsAreRatingCompatible(ticket, otherTicket)) {
                             ticket.possibleOpponents.push(otherTicket);
                         }
                     }
@@ -97,7 +123,7 @@ class MatchMaker extends EventEmitter {
         // if (ticket1.gameType == ticket2.gameType){
         //     return true;
         // }
-        if ((ticket1.gameType == EGameType.twoAT || ticket1.gameType == EGameType.twoRT) && (ticket2.gameType == EGameType.twoAT || ticket2.gameType == EGameType.twoRT)) {
+        if ((ticket1.gameType == EGameType.twosAT || ticket1.gameType == EGameType.twosRT) && (ticket2.gameType == EGameType.twosAT || ticket2.gameType == EGameType.twosRT)) {
             return true;
         }
         return false;
@@ -108,17 +134,17 @@ class MatchMaker extends EventEmitter {
     }
 
 
-    private ticketsAreEloCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket): boolean { //each ticket has to be within the elo search range as the other ticket for them to be compatible
-        var eloSearchBump1 = 0;
-        var eloSearchBump2 = 0;
-        if (ticket1.gameType === EGameType.twoAT) {
-            eloSearchBump1 = this.eloBumpForATSearch;
+    private ticketsAreRatingCompatible(ticket1: GameSearchTicket, ticket2: GameSearchTicket): boolean { //each ticket has to be within the elo search range as the other ticket for them to be compatible
+        var ratingSearchBump1 = 0;
+        var ratingSearchBump2 = 0;
+        if (ticket1.gameType === EGameType.twosAT) {
+            ratingSearchBump1 = this.ratingBumpForATSearch;
         }
-        if (ticket2.gameType === EGameType.twoAT) {
-            eloSearchBump2 = this.eloBumpForATSearch;
+        if (ticket2.gameType === EGameType.twosAT) {
+            ratingSearchBump2 = this.ratingBumpForATSearch;
         }
-        if ((ticket1.elo + eloSearchBump1 + ticket1.eloSearchRange > ticket2.elo + eloSearchBump2) && (ticket1.elo + eloSearchBump1 - ticket1.eloSearchRange < ticket2.elo + eloSearchBump2)) {
-            if ((ticket2.elo + eloSearchBump2 + ticket2.eloSearchRange > ticket1.elo + eloSearchBump1) && (ticket2.elo + eloSearchBump2 - ticket2.eloSearchRange < ticket1.elo + eloSearchBump1)) {
+        if ((ticket1.ratings[0] + ratingSearchBump1 + ticket1.ratingSearchRange > ticket2.ratings[0] + ratingSearchBump2) && (ticket1.ratings[0] + ratingSearchBump1 - ticket1.ratingSearchRange < ticket2.ratings[0] + ratingSearchBump2)) {
+            if ((ticket2.ratings[0] + ratingSearchBump2 + ticket2.ratingSearchRange > ticket1.ratings[0] + ratingSearchBump1) && (ticket2.ratings[0] + ratingSearchBump2 - ticket2.ratingSearchRange < ticket1.ratings[0] + ratingSearchBump1)) {
                 return true;
             }
         }
@@ -130,10 +156,10 @@ class MatchMaker extends EventEmitter {
         for (let ticket of this.searchTickets) {
             console.log(ticket.username + " has " + ticket.possibleOpponents.length + " possible opponnets");
             if (!ticket.hasBeenMatched) {
-                if (ticket.gameType == EGameType.fourRT && ticket.possibleOpponents.length >= 7) {
+                if (ticket.gameType == EGameType.foursRT && ticket.possibleOpponents.length >= 7) {
                     this.considerMakingFoursMatch(ticket);
                 }
-                if ((ticket.gameType == EGameType.twoAT || ticket.gameType == EGameType.twoRT) && ticket.possibleOpponents.length >= 3) {
+                if ((ticket.gameType == EGameType.twosAT || ticket.gameType == EGameType.twosRT) && ticket.possibleOpponents.length >= 3) {
                     this.considerMakingTwosMatch(ticket);
                 }
                 if (ticket.gameType == EGameType.solo && ticket.possibleOpponents.length >= 1) {
@@ -245,8 +271,8 @@ class MatchMaker extends EventEmitter {
 
         for (let ticket of this.searchTickets) {
             var secondsSinceLastSearchExpansion = (Date.now() - ticket.timeOfLastSearchRangeExpansion) / 1000;
-            if (ticket.eloSearchRange < this.maxSearchRange && secondsSinceLastSearchExpansion > this.secondsUntilSearchExpansion) {
-                ticket.eloSearchRange += this.sizeOfEachSearchExpansion;
+            if (ticket.ratingSearchRange < this.maxSearchRange && secondsSinceLastSearchExpansion > this.secondsUntilSearchExpansion) {
+                ticket.ratingSearchRange += this.sizeOfEachSearchExpansion;
             }
         }
     }
@@ -272,9 +298,7 @@ class MatchMaker extends EventEmitter {
             this.emit("foursMatchMade", usernames);
         }
     }
-
-
-
 }
-export var matchmaker: MatchMaker = new MatchMaker();
+
+export const matchmaker: Matchmaker = new Matchmaker();
 

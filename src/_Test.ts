@@ -1,10 +1,10 @@
 import { matchmaker } from './Matchmaker';
 import { matchmakerAnalyzer } from './MatchmakerAnalyzer';
-import { GameSearchTicket, ERealm, EGameType } from './models/GameSearchTicket';
+import { GameSearchTicket } from './models/GameSearchTicket';
 import { ratingUpdater } from './RatingUpdater';
 import { Util } from './Util';
 
-import { matchmakingModule } from './_MatchmakingModule';
+import { matchmakingModule, ERealm, EGameType, ERace } from './_MatchmakingModule';
 import { AccountMatchmaking } from './models/persistent/AccountMatchmaking';
 import { PlayerRatingCard } from './models/PlayerRatingCard';
 
@@ -13,11 +13,10 @@ class Main {
         console.log("\nPress ctrl + c to exit the application...\n")
 
         matchmakingModule.integrationTest(new AccountMatchmaking());
-        Main.example1v1RatingsUpdateSubmission();
-        Main.example2v2RatingsUpdateSubmission();
-        Main.example4v4RatingsUpdateSubmission();
+        // Main.example1v1RatingsUpdateSubmission();
+        // Main.example4v4RatingsUpdateSubmission();
 
-        Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
+        // Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
 
 
         matchmaker.on("soloMatchMade", (usernames: string[]) => {
@@ -40,7 +39,7 @@ class Main {
     }
 
     private static updateMatchmaker(): void {
-        Main.submitRandomGameSearchTickets(Util.getRandomInteger(1, 10));
+        //Main.submitRandomGameSearchTickets(Util.getRandomInteger(1, 10));
         matchmaker.processSearchTickets();
     }
 
@@ -100,7 +99,7 @@ class Main {
             let newTicket = new GameSearchTicket();
 
             let elo = Util.getRandomInteger(1000, 2400)
-            newTicket.elo = elo;
+            newTicket.ratings[0] = elo;
 
             newTicket.gameType = 0;
             var randomInt = Util.getRandomInteger(0, 4);
@@ -108,17 +107,17 @@ class Main {
                 newTicket.gameType |= EGameType.solo;
             }
             else if (randomInt === 1) {
-                newTicket.gameType |= EGameType.twoRT;
+                newTicket.gameType |= EGameType.twosRT;
             }
             else if (randomInt === 2) {
                 var cutInHalf = Util.getRandomInteger(0, 2);//added to check numbers. since these tickets count for two people, i want half as many of them.
                 if (cutInHalf === 1) {
                     return;
                 }
-                newTicket.gameType |= EGameType.twoAT;
+                newTicket.gameType |= EGameType.twosAT;
             }
             else if (randomInt === 3) {
-                newTicket.gameType |= EGameType.fourRT;
+                newTicket.gameType |= EGameType.foursRT;
             }
 
             newTicket.realmSearch = 0;
@@ -141,11 +140,11 @@ class Main {
 
 
             newTicket.username = "testUser" + elo + realmIDs + newTicket.gameType;//the fake (info rich) username
-            if (newTicket.gameType === EGameType.twoAT) {
+            if (newTicket.gameType === EGameType.twosAT) {
                 newTicket.partner = "PARTNERof" + newTicket.username;// + Util.getRandomArbitrary(0, 99).toString;
             }
 
-            matchmaker.beginGameSearch(newTicket);
+            //matchmaker.beginMatchSearch(newTicket);
         }
     }
 
