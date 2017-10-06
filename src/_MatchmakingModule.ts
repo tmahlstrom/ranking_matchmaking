@@ -2,6 +2,8 @@ import { matchmaker } from "./Matchmaker";
 import { EGameType, ERealm, ERace } from "./models/Enums";
 import { EventEmitter } from "events";
 import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models/ExternalModels";
+import { matchAssignmentDatabase } from "./MatchAssignmentDatabase"; 
+
 
 export { AccountMatchmaking, MatchSearchTicket, MatchAssignment }
 
@@ -11,12 +13,10 @@ class MatchmakingModule extends EventEmitter {
         super();
         //proxy relevant events
         matchmaker.on('matchMade', (details : MatchAssignment) => {
-            //matched
-            const matchId = 1; //Get next ID number
-            details.matchID = matchId; 
-            //add details to list of matches made 
+            const matchId = matchAssignmentDatabase.registerMatch(details);
+            details.matchID = matchId;
             console.log(details);
-            this.emit('matchMade', details)          
+            this.emit('matchMade', details);       
         })
     }
 

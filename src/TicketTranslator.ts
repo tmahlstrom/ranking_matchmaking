@@ -65,15 +65,16 @@ class TicketTranslator {
 
         if (((details.gameType & EGameType.twosAT) > 0) || ((details.gameType & EGameType.twosRT) > 0)){
             let gType : number = 0; 
-            if ((details.gameType & EGameType.twosAT) > 0){
+            let rating : number = 0; 
+            if (((details.gameType & EGameType.twosAT) > 0) && details.players.length > 1){
                 gType = EGameType.twosAT;
+                ticket.partnerRating = details.players[1].twosRating;
+                rating = (details.players[0].twosRating + ticket.partnerRating) / 2; 
             } else {
                 gType = EGameType.twosRT;
+                rating = details.players[0].twosRating;
             }
-            ticket.ratings.push([gType, details.races[0], details.players[0].twosRating]);
-            if ((details.gameType === EGameType.twosAT) && details.players.length > 1){
-                ticket.partnerRating = details.players[1].twosRating;
-            }
+            ticket.ratings.push([gType, details.races[0], rating]);
         }
 
         if ((details.gameType & EGameType.foursRT) > 0){

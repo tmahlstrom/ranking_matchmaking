@@ -32,7 +32,7 @@ class Matchmaker extends EventEmitter {
         let processingTicket : MatchProcessingTicket = ticketTranslator.createMatchProcessingTicket(searchDetails); 
         processingTicket.ratingSearchRange = this.startingratingSearchRange;
         this.ticketsToAdd.push(processingTicket);
-        console.log("    added " + processingTicket.account.username + processingTicket.ratings);
+        console.log("    added " + processingTicket.account.username + "  ratings: " + processingTicket.ratings);
     }
 
     public cancelMatchSearch(accounts: AccountMatchmaking[]): void {
@@ -40,6 +40,7 @@ class Matchmaker extends EventEmitter {
             for (let j = 0; j < this.searchTickets.length; j ++){
                 if (accounts[i] === this.searchTickets[j].account){
                     this.ticketsToRemove.push(this.searchTickets[j]); 
+                    //console.log("\n ADDED NEW TICKET TO LIST OF TICKETS TO REMOVE \n");
                 }
             }
         }
@@ -48,7 +49,7 @@ class Matchmaker extends EventEmitter {
     public processSearchTickets(): void {
         this.removeCanceledTickets();
         this.addNewTickets();
-        console.log(this.searchTickets.length + " solo tickets being considered");
+        console.log(this.searchTickets.length + " tickets being considered");
         this.determinePossibleOpponents();
         this.considerMakingMatches();
         this.removeMatchedTicketsFromSearch();
@@ -76,6 +77,7 @@ class Matchmaker extends EventEmitter {
     private removeCanceledTickets(): void {
         for (let ticket of this.ticketsToRemove) {
             this.searchTickets.splice(this.searchTickets.indexOf(ticket));
+            console.log("\n REMOVED: " + ticket.account.username + "\n");
         }
         this.ticketsToRemove = new Array();
     }
@@ -121,7 +123,7 @@ class Matchmaker extends EventEmitter {
         }
         for (let i = 0; i < ticket1.ratings.length; i++){
             for (let j = 0; j < ticket2.ratings.length; j++){
-                if (ticket1.ratings[i][0] == ticket2.ratings[j][0]){
+                if ((ticket1.ratings[i][0] == ticket2.ratings[j][0]) || (ticket1.ratings[i][0] + ticket2.ratings[j][0] == EGameType.twosAT + EGameType.twosRT)){
                     if ((ticket1.ratings[i][2] + ratingSearchBump1 + ticket1.ratingSearchRange > ticket2.ratings[j][2] + ratingSearchBump2) && (ticket1.ratings[i][2] + ratingSearchBump1 - ticket1.ratingSearchRange < ticket2.ratings[j][2] + ratingSearchBump2)) {
                         if ((ticket2.ratings[j][2] + ratingSearchBump2 + ticket2.ratingSearchRange > ticket1.ratings[i][2] + ratingSearchBump1) && (ticket2.ratings[j][2] + ratingSearchBump2 - ticket2.ratingSearchRange < ticket1.ratings[i][2] + ratingSearchBump1)) {
                             return true;
@@ -228,20 +230,56 @@ class Matchmaker extends EventEmitter {
             ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
         }
         tickets = this.assignRaces(tickets); 
+        if (this.checkNeedOrganizeTeams(tickets)){
+            tickets = this.organizeTeams(tickets); 
+        }
         let matchAssignment = new MatchAssignment; 
         matchAssignment = ticketTranslator.createMatchAssignment(tickets);
         this.emit("matchMade", matchAssignment);
     }
 
+    private checkNeedOrganizeTeams(tickets : MatchProcessingTicket[]){
+        let hasNeedOfOrganization : boolean = true; 
+        if (tickets.length > 2){
+            for (let i = 0; i < tickets.length; i++){
+                if (tickets[i].partnerAccount != null){
+                    hasNeedOfOrganization = false;
+                    break; 
+                }
+            }
+        }
+        return hasNeedOfOrganization; 
+    }
+
+    private organizeTeams(tickets : MatchProcessingTicket[]){
+        if (tickets.length == 4){
+            tickets.sort((x, y) => y.account.twosRating - x.account.twosRating);
+            var temp : MatchProcessingTicket = tickets[1];
+            tickets[1] = tickets [3];
+            tickets[3] = temp; 
+        }
+        if (tickets.length == 8){
+            tickets.sort((x, y) => y.account.foursRating - x.account.foursRating);
+            var temp : MatchProcessingTicket = tickets[1];
+            tickets[1] = tickets[5];
+            tickets[5] = temp; 
+            temp = tickets[3];
+            tickets[3] = tickets[7];
+            tickets[7] = temp; 
+        }
+
+
+        return tickets; 
+    }
+
     private assignRaces(tickets : MatchProcessingTicket[]){
         if (tickets.length == 2){
-            let ratingMatch : number [][] = this.determineClosestRatingPair (tickets[0].ratings, tickets[1].ratings); 
+            let ratingMatch : number [][] = this.determineClosestSoloRatingPair (tickets[0].ratings, tickets[1].ratings); 
             console.log(ratingMatch);
             tickets[0].race = ratingMatch[0][1]; 
             tickets[1].race = ratingMatch[1][1]; 
         }
         if (tickets.length >2){
-            let assigningPartnerRace : boolean = false; 
             let raceArray = [ERace.human, ERace.orc, ERace.elf, ERace.undead, ERace.random];
             for (let i = 0; i < tickets.length; i ++){
                 raceArray = Util.shuffleArray(raceArray);
@@ -287,12 +325,12 @@ class Matchmaker extends EventEmitter {
     }
 
 
-    private determineClosestRatingPair (ratings1 : number[][], ratings2 : number [][]): number[][]{
+    private determineClosestSoloRatingPair (ratings1 : number[][], ratings2 : number [][]): number[][]{
         let ratingsPair : number[][] = []; 
         let closestDistance : number = this.maxSearchRange + 1; 
         for (let i = 0; i < ratings1.length; i++){
             for (let j = 0; j < ratings2.length; j++){
-                if (ratings1[i][0] == ratings2[j][0]){
+                if (ratings1[i][0] == EGameType.solo && ratings2[j][0] == EGameType.solo){
                     let absDif = Math.abs(ratings1[i][2] - ratings2[j][2]); 
                     if (absDif < closestDistance){
                         ratingsPair = [ratings1[i], ratings2[j]]; 

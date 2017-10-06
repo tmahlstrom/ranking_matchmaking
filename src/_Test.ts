@@ -10,25 +10,24 @@ import { PlayerRatingCard } from './models/PlayerRatingCard';
 import { EGameType, ERealm, ERace } from "./models/Enums";  
 
 class Main {
+    public static accountToCancelSearch : AccountMatchmaking;
+    
     constructor() {
         console.log("\nPress ctrl + c to exit the application...\n")
+
+        
 
         matchmakingModule.integrationTest(new AccountMatchmaking());
         // Main.example1v1RatingsUpdateSubmission();
         // Main.example4v4RatingsUpdateSubmission();
-        // Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
 
 
 
-        matchmaker.on("soloMatchMade", (usernames: string[]) => {
-            console.log(usernames[0] + " has been matched with " + usernames[1]);
-        })
-        matchmaker.on("twosMatchMade", (usernames: string[]) => {
-            console.log(usernames[0] + " has been teamed with " + usernames[1] + " against " + usernames[2] + " and " + usernames[3] + " in a twos match");
-        })
-        matchmaker.on("foursMatchMade", (usernames: string[]) => {
-            console.log(usernames[0] + " has been teamed with " + usernames[1] + ", " + usernames[2] + ", and " + usernames[3] + " in a fours match against " + usernames[4] + ", " + usernames[5] + ", " + usernames[6] + ", " + usernames[7]);
-        })
+        setInterval(() => {
+            if (Main.accountToCancelSearch != null){
+                matchmaker.cancelMatchSearch([Main.accountToCancelSearch]);               
+            }
+        }, 1250);
 
         setInterval(() => {
             Main.updateMatchmaker()
@@ -38,6 +37,8 @@ class Main {
             Main.analyzeProcessedTickets()
         }, 5000); //when the console is not being used to example the workings of this module, this number can be called less often
     }
+
+    
 
     private static updateMatchmaker(): void {
         Main.submitRandomMatchSearchTicket(2); 
@@ -60,9 +61,9 @@ class Main {
             searchTicket = this.createRandomSearchParameters(searchTicket);
             searchTicket = this.assignMeaningfulName(searchTicket); 
             matchmaker.beginMatchSearch(searchTicket); 
-            //console.log(searchTicket.gameType);
-            // if (i==0){
-            //     matchmaker.cancelMatchSearch([account]);
+            // if (i==1){
+            //      this.accountToCancelSearch = account; 
+            //     //matchmaker.cancelMatchSearch([account]);
             // }
         }
     }
@@ -70,14 +71,14 @@ class Main {
     private static assignMeaningfulName(ticket : MatchSearchTicket){
         ticket.players[0].username = "USER_gameType:" + ticket.gameType + "_realm:" + ticket.realm + "_race:" + ticket.races[0];
         if (ticket.players.length>1){
-            ticket.players[1].username = "PARTNER_OF:" + ticket.players[0].username;
+            ticket.players[1].username = "PARTNER_OF:" + ticket.players[0].username + ticket.races[1];
         }
         return ticket; 
     }
 
     private static createRandomSearchParameters(ticket : MatchSearchTicket){
-        ticket.gameType = Util.getRandomInteger(1,11);
-        ticket.realm = Util.getRandomInteger(1,7);
+        ticket.gameType = Util.getRandomInteger(2,5);
+        ticket.realm = Util.getRandomInteger(1,2);
         ticket.races.push(Util.getRandomInteger(1, 17));
         if (ticket.gameType == EGameType.twosAT){
             let account : AccountMatchmaking = new AccountMatchmaking;
