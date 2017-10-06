@@ -2,7 +2,8 @@ import { MatchProcessingTicket } from './models/MatchProcessingTicket';
 import { EGameType, ERealm, ERace } from "./models/Enums"; 
 import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models/ExternalModels";
 import { EventEmitter } from 'events';
-
+import { ticketTranslator } from "./TicketTranslator";
+import { Util } from "./Util";
 
 
 
@@ -13,59 +14,25 @@ import { EventEmitter } from 'events';
 class Matchmaker extends EventEmitter {
 
     private searchTickets: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
+
+    
+    
     private ticketsToAdd: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
     private ticketsToRemove: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
     private processedTickets: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
 
-    public startingratingSearchRange = 250;
+    public startingratingSearchRange = 150;
     public ratingBumpForATSearch = 150;
-    public secondsUntilSearchExpansion = 3;
+    public secondsUntilSearchExpansion = 2;
     public sizeOfEachSearchExpansion = 50;
     public maxSearchRange = 700;
 
 
     public beginMatchSearch(searchDetails : MatchSearchTicket): void {
-        let processingTicket : MatchProcessingTicket = this.createMatchProcessingTicket(searchDetails); 
+        let processingTicket : MatchProcessingTicket = ticketTranslator.createMatchProcessingTicket(searchDetails); 
+        processingTicket.ratingSearchRange = this.startingratingSearchRange;
         this.ticketsToAdd.push(processingTicket);
-        console.log("    added " + processingTicket.account.username);
-    }
-
-    private createMatchProcessingTicket(searchDetails : MatchSearchTicket){
-        let processingTicket : MatchProcessingTicket = new MatchProcessingTicket;
-        processingTicket.account = searchDetails.players[0];
-        processingTicket.gameType = searchDetails.gameType;
-        processingTicket.race = searchDetails.races[0]; 
-        processingTicket.realm = searchDetails.realm; 
-        if (searchDetails.gameType === (EGameType.solo)){
-            if ((searchDetails.races[0] & ERace.human) > 0){
-                processingTicket.ratings.push(searchDetails.players[0].humRating);
-            }
-            if ((searchDetails.races[0] & ERace.orc) > 0){
-                processingTicket.ratings.push(searchDetails.players[0].orcRating);
-            }
-            if ((searchDetails.races[0] & ERace.elf) > 0){
-                processingTicket.ratings.push(searchDetails.players[0].elfRating);
-            }
-            if ((searchDetails.races[0] & ERace.undead) > 0){
-                processingTicket.ratings.push(searchDetails.players[0].undRating);
-            }
-            if ((searchDetails.races[0] & ERace.random) > 0){
-                processingTicket.ratings.push(searchDetails.players[0].rndRating);
-            }
-            processingTicket.ratingSearchRange = this.startingratingSearchRange;
-        }
-        console.log(processingTicket);
-        // if (searchDetails[0].gameType === (EGameType.twosAT | EGameType.twosRT)){
-        //     MatchProcessingTicket.ratings.push(accounts[0].twosRating);
-        // }
-        // if (searchDetails[0].gameType === (EGameType.foursRT)){
-        //     MatchProcessingTicket.ratings.push(accounts[0].foursRating);
-        // }
-        // if (accounts.length === 2){
-        //     MatchProcessingTicket.partner = accounts[1].username;
-        //     MatchProcessingTicket.partnerRating = accounts[1].twosRating;
-        // }
-        return processingTicket; 
+        console.log("    added " + processingTicket.account.username + processingTicket.ratings);
     }
 
     public cancelMatchSearch(accounts: AccountMatchmaking[]): void {
@@ -73,7 +40,6 @@ class Matchmaker extends EventEmitter {
             for (let j = 0; j < this.searchTickets.length; j ++){
                 if (accounts[i] === this.searchTickets[j].account){
                     this.ticketsToRemove.push(this.searchTickets[j]); 
-                    break;
                 }
             }
         }
@@ -82,7 +48,7 @@ class Matchmaker extends EventEmitter {
     public processSearchTickets(): void {
         this.removeCanceledTickets();
         this.addNewTickets();
-        console.log(this.searchTickets.length + " tickets being considered");
+        console.log(this.searchTickets.length + " solo tickets being considered");
         this.determinePossibleOpponents();
         this.considerMakingMatches();
         this.removeMatchedTicketsFromSearch();
@@ -115,14 +81,13 @@ class Matchmaker extends EventEmitter {
     }
 
     private determinePossibleOpponents(): void {
-        console.log("calculating possible opponents based on game type, rating, and realm");
         for (let ticket of this.searchTickets) {
             ticket.possibleOpponents = new Array();
             for (let otherTicket of this.searchTickets) {
                 if (ticket != otherTicket) {
                     if (this.ticketsAreGameTypeCompatible(ticket, otherTicket)) {
                         if (this.ticketsAreRealmCompatible(ticket, otherTicket) && this.ticketsAreRatingCompatible(ticket, otherTicket)) {
-                            ticket.possibleOpponents.push(otherTicket);
+                            this.addPossibleOpponent(ticket, otherTicket); 
                         }
                     }
                 }
@@ -148,17 +113,19 @@ class Matchmaker extends EventEmitter {
     private ticketsAreRatingCompatible(ticket1: MatchProcessingTicket, ticket2: MatchProcessingTicket): boolean { //each ticket has to be within the elo search range as the other ticket for them to be compatible
         var ratingSearchBump1 = 0;
         var ratingSearchBump2 = 0;
-        if (ticket1.gameType === EGameType.twosAT) {
+        if ((ticket1.gameType & EGameType.twosAT) > 0) {
             ratingSearchBump1 = this.ratingBumpForATSearch;
         }
-        if (ticket2.gameType === EGameType.twosAT) {
+        if ((ticket2.gameType & EGameType.twosAT) > 0) {
             ratingSearchBump2 = this.ratingBumpForATSearch;
         }
         for (let i = 0; i < ticket1.ratings.length; i++){
             for (let j = 0; j < ticket2.ratings.length; j++){
-                if ((ticket1.ratings[i] + ratingSearchBump1 + ticket1.ratingSearchRange > ticket2.ratings[j] + ratingSearchBump2) && (ticket1.ratings[i] + ratingSearchBump1 - ticket1.ratingSearchRange < ticket2.ratings[j] + ratingSearchBump2)) {
-                    if ((ticket2.ratings[j] + ratingSearchBump2 + ticket2.ratingSearchRange > ticket1.ratings[i] + ratingSearchBump1) && (ticket2.ratings[j] + ratingSearchBump2 - ticket2.ratingSearchRange < ticket1.ratings[i] + ratingSearchBump1)) {
-                        return true;
+                if (ticket1.ratings[i][0] == ticket2.ratings[j][0]){
+                    if ((ticket1.ratings[i][2] + ratingSearchBump1 + ticket1.ratingSearchRange > ticket2.ratings[j][2] + ratingSearchBump2) && (ticket1.ratings[i][2] + ratingSearchBump1 - ticket1.ratingSearchRange < ticket2.ratings[j][2] + ratingSearchBump2)) {
+                        if ((ticket2.ratings[j][2] + ratingSearchBump2 + ticket2.ratingSearchRange > ticket1.ratings[i][2] + ratingSearchBump1) && (ticket2.ratings[j][2] + ratingSearchBump2 - ticket2.ratingSearchRange < ticket1.ratings[i][2] + ratingSearchBump1)) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -166,18 +133,23 @@ class Matchmaker extends EventEmitter {
         return false;
     }
 
+    private addPossibleOpponent (ticket: MatchProcessingTicket, otherTicket: MatchProcessingTicket){
+        ticket.possibleOpponents.push(otherTicket);
+    }
+
     private considerMakingMatches(): void {
         this.searchTickets.sort((x, y) => x.possibleOpponents.length - y.possibleOpponents.length);//this orders the list based on the number of possible opponnets (low to high). in the matching, it is important to prioritize those with fewer possible opponents. 
         for (let ticket of this.searchTickets) {
             console.log(ticket.account.username + " has " + ticket.possibleOpponents.length + " possible opponnets");
             if (!ticket.hasBeenMatched) {
-                if (ticket.gameType == EGameType.foursRT && ticket.possibleOpponents.length >= 7) {
+                if (((ticket.gameType & EGameType.foursRT) > 0) && ticket.possibleOpponents.length >= 7) {
                     this.considerMakingFoursMatch(ticket);
                 }
-                if ((ticket.gameType == EGameType.twosAT || ticket.gameType == EGameType.twosRT) && ticket.possibleOpponents.length >= 3) {
-                    this.considerMakingTwosMatch(ticket);
+                if ((((ticket.gameType & EGameType.twosAT) > 0) || 
+                    ((ticket.gameType & EGameType.twosRT) > 0)) && ticket.possibleOpponents.length >= 3) {
+                        this.considerMakingTwosMatch(ticket);
                 }
-                if (ticket.gameType == EGameType.solo && ticket.possibleOpponents.length >= 1) {
+                if (((ticket.gameType & EGameType.solo) > 0) && ticket.possibleOpponents.length >= 1) {
                     this.considerMakingSoloMatch(ticket);
                 }
             }
@@ -186,68 +158,56 @@ class Matchmaker extends EventEmitter {
 
     private considerMakingSoloMatch(ticket: MatchProcessingTicket) {
         for (let i = 0; i < ticket.possibleOpponents.length; i++) {
-            if (!ticket.possibleOpponents[i].hasBeenMatched) {
-                this.makeSoloMatch([ticket, ticket.possibleOpponents[i]]);
+            if (!ticket.possibleOpponents[i].hasBeenMatched && (ticket.possibleOpponents[i].gameType & EGameType.solo) > 0) {
+                this.makeMatch([ticket, ticket.possibleOpponents[i]]);
                 break;
             }
         }
     }
 
-    private makeSoloMatch(soloTickets: MatchProcessingTicket[]): void {
-        for (let ticket of soloTickets) {
-            ticket.hasBeenMatched = true;
-            ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
-        }
-        this.packageMatchAnnouncement(soloTickets);
-    }
 
     private considerMakingTwosMatch(ticket: MatchProcessingTicket) {
         var twosGroup = new Array();
         twosGroup.push(ticket);
-        if (ticket.partner != null) {
+        if (ticket.partnerAccount != null) {
             twosGroup.push(ticket);
         }
         for (let i = 0; i < ticket.possibleOpponents.length && twosGroup.length < 4; i++) {
-            if (!ticket.possibleOpponents[i].hasBeenMatched) {
+            let otherTicket : MatchProcessingTicket = ticket.possibleOpponents[i];             
+            if (!otherTicket.hasBeenMatched && ((otherTicket.gameType & EGameType.twosRT) > 0) || ((otherTicket.gameType & EGameType.twosAT) > 0)) {
                 var groupRealmCompatible = true;
                 var teamPlacementWorks = true;
                 for (let j = 0; j < twosGroup.length; j++) {
-                    if ((ticket.possibleOpponents[i].realm & twosGroup[j].realmSearch) == 0) {
+                    if ((otherTicket.realm & twosGroup[j].realm) == 0) {
                         groupRealmCompatible = false;
                     }
-                    if (ticket.possibleOpponents[i].partner != null && twosGroup.length != 2) {
+                    if (otherTicket.partnerAccount != null && twosGroup.length != 2) {
                         teamPlacementWorks = false;
                     }
                 }
                 if (groupRealmCompatible && teamPlacementWorks) {
                     twosGroup.push(ticket.possibleOpponents[i]);
-                    if (ticket.possibleOpponents[i].partner != null) {
+                    if (ticket.possibleOpponents[i].partnerAccount != null) {
                         twosGroup.push(ticket.possibleOpponents[i]);
                     }
                 }
             }
         }
         if (twosGroup.length === 4) {
-            this.makeTwosMatch(twosGroup);
+            this.makeMatch(twosGroup);
         }
     }
 
-    private makeTwosMatch(twosTickets: MatchProcessingTicket[]) {
-        for (let ticket of twosTickets) {
-            ticket.hasBeenMatched = true;
-            ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
-        }
-        this.packageMatchAnnouncement(twosTickets);
-    }
 
     private considerMakingFoursMatch(ticket: MatchProcessingTicket) {
         var foursGroup = new Array();
         foursGroup.push(ticket);
         for (let i = 0; i < ticket.possibleOpponents.length; i++) {
-            if (!ticket.possibleOpponents[i].hasBeenMatched) {
+            let otherTicket : MatchProcessingTicket = ticket.possibleOpponents[i]; 
+            if (!otherTicket.hasBeenMatched && ((otherTicket.gameType & EGameType.foursRT) > 0)) {
                 var groupRealmCompatible = true;
                 for (let j = 0; j < foursGroup.length && foursGroup.length < 8; j++) {
-                    if ((ticket.possibleOpponents[i].realm & foursGroup[j].realmSearch) == 0) {
+                    if ((ticket.possibleOpponents[i].realm & foursGroup[j].realm) == 0) {
                         groupRealmCompatible = false;
                     }
                 }
@@ -257,19 +217,53 @@ class Matchmaker extends EventEmitter {
             }
         }
         if (foursGroup.length === 8) {
-            this.makeFoursMatch(foursGroup);
+            this.makeMatch(foursGroup);
         }
     }
 
-    private makeFoursMatch(foursTickets: MatchProcessingTicket[]) {
-        for (let ticket of foursTickets) {
+
+    private makeMatch (tickets : MatchProcessingTicket[]){
+        for (let ticket of tickets) {
             ticket.hasBeenMatched = true;
             ticket.hadToWaitTime = (Date.now() - ticket.timeOfBeginSearch) / 1000;
         }
-        this.packageMatchAnnouncement(foursTickets);
+        tickets = this.assignRaces(tickets); 
+        let matchAssignment = new MatchAssignment; 
+        matchAssignment = ticketTranslator.createMatchAssignment(tickets);
+        this.emit("matchMade", matchAssignment);
     }
 
-
+    private assignRaces(tickets : MatchProcessingTicket[]){
+        if (tickets.length == 2){
+            let ratingMatch : number [][] = this.determineClosestRatingPair (tickets[0].ratings, tickets[1].ratings); 
+            console.log(ratingMatch);
+            tickets[0].race = ratingMatch[0][1]; 
+            tickets[1].race = ratingMatch[1][1]; 
+        }
+        if (tickets.length >2){
+            let assigningPartnerRace : boolean = false; 
+            let raceArray = [ERace.human, ERace.orc, ERace.elf, ERace.undead, ERace.random];
+            for (let i = 0; i < tickets.length; i ++){
+                raceArray = Util.shuffleArray(raceArray);
+                for (let j = 0; j < raceArray.length; j ++){
+                    if ((tickets[i].race & raceArray[j]) > 0){
+                        tickets[i].race = raceArray[j]; 
+                        continue; 
+                    }
+                }
+                if (tickets[i] == tickets [i+1]){
+                    raceArray = Util.shuffleArray(raceArray);
+                    for (let j = 0; j < raceArray.length; j ++){
+                        if ((tickets[i].partnerRace & raceArray[j]) > 0){
+                            tickets[i].partnerRace = raceArray[j]; 
+                            continue; 
+                        }
+                    }
+                }
+            }
+        }
+        return tickets; 
+    }
 
     private removeMatchedTicketsFromSearch(): void {
         for (let ticket of this.searchTickets) {
@@ -292,77 +286,18 @@ class Matchmaker extends EventEmitter {
         }
     }
 
-    private packageMatchAnnouncement(processingTickets: MatchProcessingTicket[]) {
 
-        let matchAssignment = new MatchAssignment; 
-        for (let i = 0; i < processingTickets.length; i++){
-            if (i < processingTickets.length/2){
-                matchAssignment.playersTeam1.push(processingTickets[i].account); 
-            }
-            else {
-                matchAssignment.playersTeam2.push(processingTickets[i].account);
-            }
-        }
-        let realmNumber : number; 
-        for (let i = 1; i < processingTickets.length; i++){
-            realmNumber = (processingTickets[0].realm & processingTickets[i].realm); 
-        }
-        matchAssignment.realm = realmNumber; 
-
-        if (processingTickets.length == 2){
-            matchAssignment.gameType |= EGameType.solo; 
-            let ratingMatch : number [] = this.determineClosestRatingPair (processingTickets[0].ratings, processingTickets[1].ratings); 
-            console.log(ratingMatch); 
-            let race1:number = this.connectRatingToRace(ratingMatch[0], processingTickets[0]);
-            matchAssignment.racesTeam1.push(race1);
-            let race2:number = this.connectRatingToRace(ratingMatch[1], processingTickets[1]);
-            matchAssignment.racesTeam2.push(race2);
-            let raceNumber = matchAssignment.racesTeam1[0]; 
-            console.log(ERace[raceNumber]); 
-            raceNumber = matchAssignment.racesTeam2[0]; 
-            console.log(ERace[raceNumber]); 
-        }
-        if (processingTickets.length == 4){
-            matchAssignment.gameType |= EGameType.twosRT; 
-        }
-        if (processingTickets.length == 8){
-            matchAssignment.gameType |= EGameType.foursRT; 
-        }
-
-
-        this.emit("matchMade", matchAssignment);
-
-        let usernames = new Array(processingTickets.length);
-        for (let i = 0; i < usernames.length; i++) {
-            usernames[i] = processingTickets[i].account.username;
-        }
-        if (usernames.length === 2) {
-            this.emit("soloMatchMade", usernames);
-        }
-        if (usernames.length === 4) {
-            if (usernames[0] === usernames[1]) {
-                usernames[1] = processingTickets[1].partner;
-            }
-            if (usernames[2] === usernames[3]) {
-                usernames[3] = processingTickets[3].partner;
-            }
-            this.emit("twosMatchMade", usernames);
-        }
-        if (usernames.length === 8) {
-            this.emit("foursMatchMade", usernames);
-        }
-    }
-
-
-    private determineClosestRatingPair (ratings1 : number[], ratings2 : number []): number[]{
-        let ratingsPair : number [] = []; 
+    private determineClosestRatingPair (ratings1 : number[][], ratings2 : number [][]): number[][]{
+        let ratingsPair : number[][] = []; 
         let closestDistance : number = this.maxSearchRange + 1; 
         for (let i = 0; i < ratings1.length; i++){
             for (let j = 0; j < ratings2.length; j++){
-                let absDif = Math.abs(ratings1[i] - ratings2[j]); 
-                if (absDif < closestDistance){
-                    ratingsPair = [ratings1[i], ratings2[j]]; 
-                    closestDistance = absDif;
+                if (ratings1[i][0] == ratings2[j][0]){
+                    let absDif = Math.abs(ratings1[i][2] - ratings2[j][2]); 
+                    if (absDif < closestDistance){
+                        ratingsPair = [ratings1[i], ratings2[j]]; 
+                        closestDistance = absDif;
+                    }
                 }
             }
         }

@@ -18,7 +18,6 @@ class Main {
         // Main.example4v4RatingsUpdateSubmission();
         // Main.submitRandomGameSearchTickets(10);//this is also called along with Main.updateMatchmaker. See the GameSearchTicket script for details on submission
 
-        Main.submitRandomMatchSearchTicket(2); 
 
 
         matchmaker.on("soloMatchMade", (usernames: string[]) => {
@@ -41,7 +40,7 @@ class Main {
     }
 
     private static updateMatchmaker(): void {
-        //Main.submitRandomGameSearchTickets(Util.getRandomInteger(1, 10));
+        Main.submitRandomMatchSearchTicket(2); 
         matchmaker.processSearchTickets();
     }
 
@@ -56,30 +55,50 @@ class Main {
         for (let i = 0; i < count; i++) {
             let searchTicket : MatchSearchTicket = new MatchSearchTicket; 
             let account : AccountMatchmaking = new AccountMatchmaking;
+            account = this.createRandomRatings (account);
             searchTicket.players.push(account);
-            searchTicket.gameType = EGameType.solo; 
-            searchTicket.realm = 3; 
-            searchTicket.races.push (3);
-            if (i==0){
-                account.humRating = 1199; 
-                account.orcRating = 1200;
-                searchTicket.realm = 2; 
-            }
+            searchTicket = this.createRandomSearchParameters(searchTicket);
+            searchTicket = this.assignMeaningfulName(searchTicket); 
             matchmaker.beginMatchSearch(searchTicket); 
-            if (i==0){
-                matchmaker.cancelMatchSearch([account]);
-            }
+            //console.log(searchTicket.gameType);
+            // if (i==0){
+            //     matchmaker.cancelMatchSearch([account]);
+            // }
         }
     }
 
-    /*
-    For the rating update submission, the bool indicates whether or not team 1 won.
-    The order of the player rating cards indicates the teams:
-    Solo: [team1, team2]
-    Twos: [team1, team1, team2, team2]
-    and so with 4s.
-    See the PlayerRatingCard class in the Matchmaker script for details on that, but in short, it has a username and 3 rating parameters
-    */
+    private static assignMeaningfulName(ticket : MatchSearchTicket){
+        ticket.players[0].username = "USER_gameType:" + ticket.gameType + "_realm:" + ticket.realm + "_race:" + ticket.races[0];
+        if (ticket.players.length>1){
+            ticket.players[1].username = "PARTNER_OF:" + ticket.players[0].username;
+        }
+        return ticket; 
+    }
+
+    private static createRandomSearchParameters(ticket : MatchSearchTicket){
+        ticket.gameType = Util.getRandomInteger(1,11);
+        ticket.realm = Util.getRandomInteger(1,7);
+        ticket.races.push(Util.getRandomInteger(1, 17));
+        if (ticket.gameType == EGameType.twosAT){
+            let account : AccountMatchmaking = new AccountMatchmaking;
+            account = this.createRandomRatings (account);
+            ticket.players.push(account);
+            ticket.races.push(Util.getRandomInteger(1, 17));
+        }
+        return ticket; 
+    }
+
+    private static createRandomRatings (account : AccountMatchmaking){
+        account.humRating = Util.getRandomInteger(1000, 2000);
+        account.orcRating = Util.getRandomInteger(1000, 2000);
+        account.elfRating = Util.getRandomInteger(1000, 2000);
+        account.undRating = Util.getRandomInteger(1000, 2000);
+        account.rndRating = Util.getRandomInteger(1000, 2000);
+        account.twosRating = Util.getRandomInteger(1000, 2000);
+        account.foursRating = Util.getRandomInteger(1000, 2000);
+        return account; 
+    }
+
     private static example1v1RatingsUpdateSubmission() {
         let playerRatingCards = Main.createRandomPlayerRatingCards(2);
         var soloExampleUpdateSubmission = ratingUpdater.updateRating(playerRatingCards, true);
@@ -121,7 +140,7 @@ class Main {
             let newTicket = new MatchProcessingTicket();
 
             let elo = Util.getRandomInteger(1000, 2400)
-            newTicket.ratings[0] = elo;
+            newTicket.ratings[0][2] = elo;
 
             newTicket.gameType = 0;
             var randomInt = Util.getRandomInteger(0, 4);
@@ -163,7 +182,7 @@ class Main {
 
             newTicket.account.username = "testUser" + elo + realmIDs + newTicket.gameType;//the fake (info rich) username
             if (newTicket.gameType === EGameType.twosAT) {
-                newTicket.partner = "PARTNERof" + newTicket.account.username;// + Util.getRandomArbitrary(0, 99).toString;
+                //newTicket.partner = "PARTNERof" + newTicket.account.username;// + Util.getRandomArbitrary(0, 99).toString;
             }
 
             //matchmaker.beginMatchSearch(newTicket);
