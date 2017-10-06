@@ -97,6 +97,7 @@ class TicketTranslator {
                 if (tickets[i] == tickets[i+1]){
                     matchAssignment.playersTeam1.push(tickets[i].partnerAccount); 
                     matchAssignment.racesTeam1.push(tickets[i].partnerRace);
+                    matchAssignment.arrangedTeam1 = true; 
                     i++; 
                 }
             }
@@ -106,6 +107,7 @@ class TicketTranslator {
                 if (tickets[i] == tickets[i+1]){
                     matchAssignment.playersTeam2.push(tickets[i].partnerAccount); 
                     matchAssignment.racesTeam2.push(tickets[i].partnerRace);
+                    matchAssignment.arrangedTeam2 = true; 
                     i++; 
                 }
             }
@@ -120,7 +122,7 @@ class TicketTranslator {
             matchAssignment.gameType |= EGameType.solo; 
         }
         if (tickets.length == 4){
-            matchAssignment.gameType |= EGameType.twosRT; 
+            matchAssignment.gameType |= EGameType.twosRT;
         }
         if (tickets.length == 8){
             matchAssignment.gameType |= EGameType.foursRT; 

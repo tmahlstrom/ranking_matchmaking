@@ -15,8 +15,10 @@ export class MatchAssignment{
     
     public playersTeam1 : AccountMatchmaking[] = [];
     public playersTeam2 : AccountMatchmaking[] = [];
+    public arrangedTeam1 : boolean = false; 
     public racesTeam1 : number[] = []; //playersTeam1[0] is assigned racesTeam1[0], and so on
     public racesTeam2 : number[] = []; 
+    public arrangedTeam2 : boolean = false; 
 
     public realm : number; 
     public gameType : number; 
