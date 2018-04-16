@@ -3,6 +3,10 @@ import { MatchProcessingTicket } from './models/MatchProcessingTicket';
 import { EGameType, ERealm, ERace } from "./models/Enums"; 
 import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models/ExternalModels";
 
+
+
+// Creates MatchSearchTickets when handed game search details
+
 class TicketTranslator {
 
 
@@ -87,6 +91,7 @@ class TicketTranslator {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     public createMatchAssignment(tickets : MatchProcessingTicket[]){            
         let matchAssignment = new MatchAssignment; 

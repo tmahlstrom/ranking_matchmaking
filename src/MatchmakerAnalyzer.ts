@@ -1,6 +1,8 @@
 import { MatchProcessingTicket } from './models/MatchProcessingTicket';
 import { matchmaker } from './Matchmaker';
 
+// Responsible for monitoring the Matchmaker wait times and matches made. Useful for future tweaking to the algorithm. 
+
 
 class MatchmakerAnalyzer {
 

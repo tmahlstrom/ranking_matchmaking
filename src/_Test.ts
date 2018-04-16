@@ -9,6 +9,9 @@ import { AccountMatchmaking, MatchSearchTicket, MatchAssignment } from "./models
 import { PlayerRatingCard } from './models/PlayerRatingCard';
 import { EGameType, ERealm, ERace } from "./models/Enums";  
 
+
+// This class is used to create synthetic accounts and game search tickets in order to test the methods responsible for matching them and updating their ratings.
+
 class Main {
     public static accountToCancelSearch : AccountMatchmaking;
     

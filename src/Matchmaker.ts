@@ -7,7 +7,7 @@ import { Util } from "./Util";
 
 
 
-
+// Responsible for keeping track of all current MatchSerachTickets and finding matches. 
 
 
 
@@ -15,8 +15,6 @@ class Matchmaker extends EventEmitter {
 
     private searchTickets: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
 
-    
-    
     private ticketsToAdd: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
     private ticketsToRemove: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();
     private processedTickets: Array<MatchProcessingTicket> = new Array<MatchProcessingTicket>();

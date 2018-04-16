@@ -1,5 +1,7 @@
 import { PlayerRatingCard } from "./models/PlayerRatingCard";
 
+// Updates player ratings in response to a win/loss
+
 var glicko2 = require('./glicko2');
 
 var settings = {
